@@ -200,9 +200,8 @@
       : error;
     return `<details class="issue"><summary>${esc(title)}</summary><code>${esc(relative ? relative + ': ' : '')}${esc(error)}</code></details>`;
   }
-  function render() {
-    window.workspaceUI.closeMenu();
-    const status = dirty
+  function projectStatus() {
+    return dirty
       ? t('unsaved')
       : !detail?.exists
         ? t('noManifest')
@@ -213,6 +212,10 @@
               ? t('consistent')
               : t('pending')
           : t('saved');
+  }
+  function render() {
+    window.workspaceUI.closeMenu();
+    const status = projectStatus();
     $('#app').innerHTML = `<main class="workspace">
       <header class="workspace-header">
         <div class="project-picker">${glyph('folder')}<button id="project-select" class="picker project-choice" data-action="project-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('projects')}" title="${esc(project?.dir || '')}"><span>${esc(project ? leaf(project.dir) : t('chooseProject'))}</span>${glyph('chevron')}</button>${iconButton('project-form', t('addProject'), 'plus')}</div>
@@ -239,7 +242,7 @@
       <nav class="view-tabs" aria-label="Workspace views">${['skills', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k)}${k === 'skills' && entries.length ? ` <span class="count">${entries.length}</span>` : ''}</button>`).join('')}</nav>`
           : ''
       }
-      ${project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}
+      <section class="workspace-view">${project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}</section>
     </main>`;
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     const all = $('#category-all');
@@ -269,7 +272,7 @@
         list
           .map((s) => {
             const e = entries.find((e) => e.name === s.name && e.path === s.path);
-            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button>${e ? `<div class="skill-agents lib-agents" role="group" aria-label="${esc(s.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents || []).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(s.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>` : ''}</div>`;
+            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button>${e ? `<div class="skill-agents lib-agents" role="group" aria-label="${esc(s.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents ?? defaults).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(s.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>` : ''}</div>`;
           })
           .join('') || `<p class="empty">${t('noSkills')}</p>`
       }</div>`;
@@ -338,14 +341,78 @@
     dirty = text !== savedText;
     plan = null;
   }
-  async function draft({ initial = false } = {}) {
+  // Keep agent buttons alive so native CSS can interpolate both on and off.
+  function updateAgentControls() {
+    const selected = (button, agents) => {
+      button.classList.toggle('on', agents.includes(button.dataset.agent));
+      button.setAttribute('aria-pressed', agents.includes(button.dataset.agent));
+    };
+    document
+      .querySelectorAll('[data-action="default-agent"]')
+      .forEach((button) => selected(button, defaults));
+    document.querySelectorAll('.skill-agents').forEach((group) => {
+      const reset = group.querySelector('[data-action="inherit"]');
+      const entry = entries.find((e) => e.name === reset.dataset.name);
+      if (!entry) return;
+      const agents = entry.agents ?? defaults;
+      const visible = new Set([...primaryAgents, ...agents]);
+      for (const agent of visible) {
+        let button = group.querySelector(`[data-agent="${CSS.escape(agent)}"]`);
+        if (!button) {
+          reset.insertAdjacentHTML(
+            'beforebegin',
+            chips([agent], agents, 'skill-agent', `data-name="${esc(entry.name)}"`, true),
+          );
+          button = reset.previousElementSibling;
+          if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+            button.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' });
+        }
+        button.classList.remove('leaving');
+        button.removeAttribute('aria-hidden');
+        button.removeAttribute('tabindex');
+        selected(button, agents);
+      }
+      for (const button of group.querySelectorAll('[data-action="skill-agent"]')) {
+        if (visible.has(button.dataset.agent)) continue;
+        selected(button, []);
+        button.classList.add('leaving');
+        button.setAttribute('aria-hidden', 'true');
+        button.tabIndex = -1;
+        if (document.activeElement === button) reset.focus({ preventScroll: true });
+        const remove = () => {
+          if (button.classList.contains('leaving')) button.remove();
+        };
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) remove();
+        else setTimeout(remove, 200);
+      }
+      reset.classList.toggle('inherited', entry.agents === undefined);
+      reset.title = t(entry.agents === undefined ? 'inherit' : 'resetAgents');
+    });
+    document
+      .querySelectorAll('[data-action="method"]')
+      .forEach((button) => button.setAttribute('aria-pressed', button.dataset.value === method));
+    const status = $('#project-status');
+    if (status) {
+      status.textContent = projectStatus();
+      status.className = 'state' + (plan && !plan.ok ? ' error' : '');
+    }
+    $('[data-action="save"]').disabled = !dirty && detail?.exists;
+    $('[data-action="preview"]').disabled = !text.trim();
+    $('[data-action="apply"]').disabled = dirty || !detail?.exists || !plan?.ok;
+    $('.view-tabs [data-value="skills"]').innerHTML =
+      t('skills') + (entries.length ? ` <span class="count">${entries.length}</span>` : '');
+    if (tab === 'manifest') $('#manifest-editor').value = text;
+    if (tab === 'plan') $('.workspace-view').innerHTML = renderPlan();
+  }
+  async function draft({ initial = false, agentsOnly = false } = {}) {
     const version = ++draftVersion;
     const result = await api('draft', { source, skills: entries, agents: defaults, method });
     if (version !== draftVersion) return;
     text = result.text;
     setDirty();
     if (initial) dirty = false;
-    render();
+    if (agentsOnly) updateAgentControls();
+    else render();
   }
   async function loadSource(dir, { reset = false } = {}) {
     source = dir;
@@ -527,7 +594,7 @@
       if (['default-agent', 'method', 'skill-agent', 'inherit'].includes(a)) await formFromText();
       if (a === 'default-agent') {
         defaults = toggle(defaults, b.dataset.agent);
-        await draft();
+        await draft({ agentsOnly: true });
       }
       if (a === 'method') {
         method = b.dataset.value;
@@ -536,13 +603,13 @@
       if (a === 'skill-agent') {
         const e = entries.find((e) => e.name === b.dataset.name);
         e.agents = toggle(e.agents ?? defaults, b.dataset.agent);
-        await draft();
+        await draft({ agentsOnly: true });
       }
       if (a === 'inherit') {
         const e = entries.find((e) => e.name === b.dataset.name);
         if (e.agents !== undefined) delete e.agents;
         else e.agents = [...defaults];
-        await draft();
+        await draft({ agentsOnly: true });
       }
       if (a === 'save') {
         await api('manifest/save', { dir: project.dir, text, expectedText: savedText });
