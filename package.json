@@ -1,0 +1,43 @@
+{
+  "name": "@ffy6511/magpie-skill-workspaces",
+  "version": "0.1.0",
+  "description": "Categorized skill libraries and manifest-driven project workspaces for Magpie",
+  "type": "module",
+  "main": "./index.mjs",
+  "bin": {
+    "skill-workspaces": "./cli.mjs"
+  },
+  "files": ["index.mjs", "cli.mjs", "src", "page", "ui", "docs", "README.md"],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test",
+    "start": "node cli.mjs serve",
+    "check": "node --check index.mjs && node --check cli.mjs && node --check ui/app.js"
+  },
+  "magpie": {
+    "summary": {
+      "en": "Deploy categorized skills to projects from a Git-tracked manifest",
+      "zh": "从分类技能库和项目清单同步项目级技能"
+    },
+    "page": {
+      "title": "Skill Workspaces",
+      "titles": {
+        "zh": "技能工作区"
+      },
+      "file": "page/index.html",
+      "icon": "page/icon.svg",
+      "service": {
+        "port": 3498,
+        "option": "port"
+      }
+    },
+    "options": {
+      "port": 3498
+    }
+  },
+  "dependencies": {
+    "yaml": "^2.9.1"
+  }
+}
