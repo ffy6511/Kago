@@ -15,7 +15,9 @@
     cancel: ['取消', 'Cancel'],
     more: ['更多', 'More'],
     moreAgents: ['更多 agent', 'More agents'],
-    selection: ['选择操作', 'Selection'],
+    selectAll: ['全选', 'Select all'],
+    fewerAgents: ['收起', 'Fewer agents'],
+    close: ['关闭', 'Close'],
     resetAgents: ['恢复项目默认', 'Reset to project defaults'],
     projects: ['项目', 'Project'],
     add: ['添加', 'Add'],
@@ -51,8 +53,6 @@
     conflicts: ['存在冲突', 'Conflicts found'],
     keep: ['保留部署文件后取消托管', 'Unregister and keep deployed files'],
     reload: ['刷新', 'Refresh'],
-    clear: ['清空选择', 'Clear selection'],
-    pickAll: ['选择当前分类', 'Select category'],
   };
   const t = (k) => words[k]?.[lang === 'zh' ? 0 : 1] || k,
     leaf = (p) => p.split(/[\\/]/).filter(Boolean).at(-1) || p;
@@ -94,6 +94,7 @@
     busy = false,
     sourceForm = false,
     projectForm = false,
+    moreAgentsOpen = false,
     draftVersion = 0,
     manual = false;
   let noticeTimer;
@@ -158,6 +159,7 @@
     refresh: 'M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-2L20 8M4 16l2.3 3A7 7 0 0 0 18 17',
     folder: 'M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z',
     reset: 'M4 5v5h5M4.5 10a8 8 0 1 1 .8 7',
+    chevron: 'm8 10 4 4 4-4',
   };
   const glyph = (name) =>
     `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${glyphs[name]}"/></svg>`;
@@ -193,6 +195,7 @@
     return `<details class="issue"><summary>${esc(title)}</summary><code>${esc(relative ? relative + ': ' : '')}${esc(error)}</code></details>`;
   }
   function render() {
+    window.workspaceUI.closeMenu();
     const status = dirty
       ? t('unsaved')
       : !detail?.exists
@@ -206,7 +209,7 @@
           : t('saved');
     $('#app').innerHTML = `<main class="workspace">
       <header class="workspace-header">
-        <div class="project-picker">${glyph('folder')}<select id="project-select" aria-label="${t('projects')}" title="${esc(project?.dir || '')}"><option value="" ${!project ? 'selected' : ''}>${t('chooseProject')}</option>${state.projects.map((p) => `<option value="${esc(p.dir)}" ${project?.dir === p.dir ? 'selected' : ''}>${esc(leaf(p.dir))}</option>`).join('')}</select>${iconButton('project-form', t('addProject'), 'plus')}</div>
+        <div class="project-picker">${glyph('folder')}<button id="project-select" class="picker project-choice" data-action="project-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('projects')}" title="${esc(project?.dir || '')}"><span>${esc(project ? leaf(project.dir) : t('chooseProject'))}</span>${glyph('chevron')}</button>${iconButton('project-form', t('addProject'), 'plus')}</div>
         <div class="actions">
           ${project ? `<span id="project-status" class="state ${plan && !plan.ok ? 'error' : ''}">${status}</span><button data-action="save" ${!dirty && detail?.exists ? 'disabled' : ''}>${t('save')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${dirty || !detail?.exists || !plan?.ok ? 'disabled' : ''}>${t('apply')}</button>` : ''}
           <details class="menu"><summary class="icon-button" aria-label="${t('more')}" title="${t('more')}">${glyph('more')}</summary><div class="menu-items">
@@ -222,18 +225,28 @@
       ${(detail?.conflicts || []).map((c) => issue(c)).join('')}${detail?.parseError ? issue(detail.parseError) : ''}
       ${
         project
-          ? `<div class="project-settings"><div class="lib-agents" role="group" aria-label="${t('defaults')}">${chips(primaryAgents, defaults, 'default-agent')}<details class="more-agents"><summary class="icon-button" aria-label="${t('moreAgents')}" title="${t('moreAgents')}">${glyph('more')}</summary><div class="agent-popover">${chips(
+          ? `<div class="project-settings"><div class="lib-agents" role="group" aria-label="${t('defaults')}">${chips(primaryAgents, defaults, 'default-agent')}<button class="more-agents-button" data-action="more-agents" aria-expanded="${moreAgentsOpen}" aria-controls="extra-agents"><span>${t(moreAgentsOpen ? 'fewerAgents' : 'moreAgents')}</span>${glyph('chevron')}</button></div><div class="seg" role="group" aria-label="${t('method')}">${['link', 'copy'].map((m) => `<button data-action="method" data-value="${m}" aria-pressed="${m === method}">${t(m)}</button>`).join('')}</div></div><div id="extra-agents" class="extra-agents ${moreAgentsOpen ? 'expanded' : ''}" ${moreAgentsOpen ? '' : 'inert'}><div><div class="lib-agents" role="group" aria-label="${t('moreAgents')}">${chips(
               Object.keys(state.agents).filter((a) => !primaryAgents.includes(a)),
               defaults,
               'default-agent',
-            )}</div></details></div><div class="seg" role="group" aria-label="${t('method')}">${['link', 'copy'].map((m) => `<button data-action="method" data-value="${m}" aria-pressed="${m === method}">${t(m)}</button>`).join('')}</div></div>
+            )}</div></div></div>
       <nav class="view-tabs" aria-label="Workspace views">${['skills', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k)}${k === 'skills' && entries.length ? ` <span class="count">${entries.length}</span>` : ''}</button>`).join('')}</nav>`
           : ''
       }
       ${project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}
     </main>`;
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
+    const all = $('#category-all');
+    if (all) {
+      const scope = categorySkills(),
+        count = scope.filter(isSelected).length;
+      all.checked = scope.length > 0 && count === scope.length;
+      all.indeterminate = count > 0 && count < scope.length;
+    }
   }
+  const categorySkills = () =>
+    (scan?.skills || []).filter((s) => !category || s.category === category);
+  const isSelected = (s) => entries.some((e) => e.name === s.name && e.path === s.path);
   function renderSkills() {
     if (!source)
       return `<div class="empty"><button data-action="source-form">${glyph('plus')}${t('addSource')}</button><button data-action="library">${t('library')}</button></div>`;
@@ -243,21 +256,14 @@
         (!query || `${s.name} ${s.description}`.toLowerCase().includes(query.toLowerCase())),
     );
     const categories = [...new Set((scan?.skills || []).map((s) => s.category))];
-    return `<div class="source-toolbar"><select id="source-select" aria-label="${t('source')}" title="${esc(source)}">${availableSources()
-      .map(
-        (s) =>
-          `<option value="${esc(s)}" ${s === source ? 'selected' : ''}>${esc(sourceTitle(s))}</option>`,
-      )
-      .join(
-        '',
-      )}</select><input type="search" id="search" aria-label="${t('search')}" placeholder="${t('search')}" value="${esc(query)}"></div>
-      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<details class="menu"><summary class="icon-button" aria-label="${t('selection')}" title="${t('selection')}">${glyph('more')}</summary><div class="menu-items"><button data-action="pick-all">${t('pickAll')}</button><button data-action="clear">${t('clear')}</button></div></details>` : ''}</div>
+    return `<div class="source-toolbar"><button id="source-select" class="picker source-choice" data-action="source-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('source')}" title="${esc(source)}"><span>${esc(sourceTitle(source))}</span>${glyph('chevron')}</button><input type="search" id="search" aria-label="${t('search')}" placeholder="${t('search')}" value="${esc(query)}"></div>
+      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<label class="category-all"><input id="category-all" type="checkbox" ${!categorySkills().length ? 'disabled' : ''}><span>${t('selectAll')}</span></label>` : ''}</div>
       ${(scan?.problems || []).map((p) => issue(p.error, p.path)).join('')}
       <div class="skills">${
         list
           .map((s) => {
             const e = entries.find((e) => e.name === s.name && e.path === s.path);
-            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><details class="skill-info"><summary>${esc(s.name)}</summary><p>${esc(s.description)}</p><code>${esc(s.path)}</code></details>${e ? `<div class="skill-agents lib-agents" role="group" aria-label="${esc(s.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents || []).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(s.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>` : ''}</div>`;
+            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button>${e ? `<div class="skill-agents lib-agents" role="group" aria-label="${esc(s.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents || []).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(s.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>` : ''}</div>`;
           })
           .join('') || `<p class="empty">${t('noSkills')}</p>`
       }</div>`;
@@ -280,6 +286,19 @@
       (p) => !plan.operations.some((o) => o.relative === p.relative && o.action === 'conflict'),
     );
     return `${extraProblems.map((p) => issue(p.error, p.relative)).join('')}<div class="plan">${plan.operations.map((o) => `<div class="plan-row ${o.action}"><span class="operation">${labels[o.action]?.[lang === 'zh' ? 0 : 1]}</span><div><code>${esc(o.relative)}</code>${o.error ? issue(o.error) : ''}</div></div>`).join('') || `<p class="empty">${t('consistent')}</p>`}</div>`;
+  }
+  async function previewSkill(anchor) {
+    const skill = await api('skill/read', { source, path: anchor.dataset.path });
+    const reader = document.createElement('div');
+    reader.className = 'editor lib-editor lib-reader lib-skillfile';
+    const metadata = Object.entries(skill.metadata)
+      .map(
+        ([key, value]) =>
+          `<dt>${esc(key)}</dt><dd>${esc(typeof value === 'object' ? JSON.stringify(value) : value)}</dd>`,
+      )
+      .join('');
+    reader.innerHTML = `<div class="ehead"><b>${esc(skill.name)}</b><span class="skill-file">SKILL.md</span></div><div class="lib-skillbody"><div class="lib-mdview">${metadata ? `<dl class="lib-fm">${metadata}</dl>` : ''}${skill.html}</div></div><div class="bar"><code title="${esc(skill.path)}">${esc(skill.path)}</code><button data-close-modal>${t('close')}</button></div>`;
+    window.workspaceUI.showModal(reader, reader.querySelector('.ehead b'), anchor);
   }
   async function formFromText() {
     if (!manual) return;
@@ -384,8 +403,56 @@
   $('#app').addEventListener('click', (event) => {
     const b = event.target.closest('button[data-action]');
     if (!b) return;
+    if (b.dataset.action === 'project-picker') {
+      window.workspaceUI.popup(
+        b,
+        [
+          { value: '', label: t('chooseProject') },
+          ...state.projects.map((p) => ({ value: p.dir, label: leaf(p.dir) })),
+        ],
+        project?.dir || '',
+        (dir) =>
+          run(async () => {
+            if (dir) await selectProject(dir);
+            else if (
+              !dirty ||
+              window.confirm(lang === 'zh' ? '放弃未保存的修改？' : 'Discard unsaved changes?')
+            ) {
+              project = null;
+              detail = null;
+              entries = [];
+              dirty = false;
+              render();
+            }
+          }),
+        t('projects'),
+      );
+      return;
+    }
+    if (b.dataset.action === 'source-picker') {
+      window.workspaceUI.popup(
+        b,
+        availableSources().map((dir) => ({ value: dir, label: sourceTitle(dir) })),
+        source,
+        (dir) => run(() => loadSource(dir, { reset: !!project })),
+        t('source'),
+      );
+      return;
+    }
+    if (b.dataset.action === 'more-agents') {
+      moreAgentsOpen = !moreAgentsOpen;
+      b.setAttribute('aria-expanded', moreAgentsOpen);
+      b.querySelector('span').textContent = t(moreAgentsOpen ? 'fewerAgents' : 'moreAgents');
+      $('#extra-agents').classList.toggle('expanded', moreAgentsOpen);
+      $('#extra-agents').inert = !moreAgentsOpen;
+      return;
+    }
     run(async () => {
       const a = b.dataset.action;
+      if (a === 'skill-preview') {
+        await previewSkill(b);
+        return;
+      }
       if (a === 'submit-form') {
         await submitForm(b.closest('form'));
         return;
@@ -454,8 +521,7 @@
         return;
       }
       if (!project) return;
-      if (['default-agent', 'method', 'skill-agent', 'inherit', 'clear', 'pick-all'].includes(a))
-        await formFromText();
+      if (['default-agent', 'method', 'skill-agent', 'inherit'].includes(a)) await formFromText();
       if (a === 'default-agent') {
         defaults = toggle(defaults, b.dataset.agent);
         await draft();
@@ -473,15 +539,6 @@
         const e = entries.find((e) => e.name === b.dataset.name);
         if (e.agents !== undefined) delete e.agents;
         else e.agents = [...defaults];
-        await draft();
-      }
-      if (a === 'clear') {
-        entries = [];
-        await draft();
-      }
-      if (a === 'pick-all') {
-        for (const s of scan.skills.filter((s) => !category || s.category === category))
-          if (!entries.some((e) => e.name === s.name)) entries.push({ name: s.name, path: s.path });
         await draft();
       }
       if (a === 'save') {
@@ -523,22 +580,27 @@
     });
   });
   $('#app').addEventListener('change', (event) => {
-    if (event.target.id === 'project-select')
+    if (event.target.id === 'category-all') {
+      const checked = event.target.checked;
       return run(async () => {
-        if (event.target.value) await selectProject(event.target.value);
-        else if (
-          !dirty ||
-          window.confirm(lang === 'zh' ? '放弃未保存的修改？' : 'Discard unsaved changes?')
-        ) {
-          project = null;
-          detail = null;
-          entries = [];
-          dirty = false;
-          render();
-        } else render();
+        await formFromText();
+        const scope = categorySkills();
+        if (checked) {
+          const next = [...entries];
+          for (const skill of scope) {
+            if (next.some((e) => e.name === skill.name && e.path !== skill.path))
+              throw new Error('Duplicate name; select a single source path');
+            if (!next.some((e) => e.name === skill.name && e.path === skill.path))
+              next.push({ name: skill.name, path: skill.path });
+          }
+          entries = next;
+        } else
+          entries = entries.filter(
+            (e) => !scope.some((s) => s.name === e.name && s.path === e.path),
+          );
+        await draft();
       });
-    if (event.target.id === 'source-select')
-      return run(() => loadSource(event.target.value, { reset: !!project }));
+    }
     if (event.target.dataset.skill)
       return run(async () => {
         const s = scan.skills.find((s) => s.path === event.target.dataset.skill);

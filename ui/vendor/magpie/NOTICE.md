@@ -8,3 +8,5 @@ Source: https://github.com/yetone/magpie (MIT; license included).
 - `controls.css`: native Library agent chip rules (formatting only) from `internal/gui/assets/plugins/library/library.css`.
 
 Runtime theme values come directly from Magpie's bridge. No parent DOM access or Magpie internal API access is required.
+
+`components.css` contains the native popup/protocol menu, modal/editor, and Library Skill reader rules from `internal/gui/assets/app.css` and `internal/gui/assets/plugins/library/library.css`. `ui/native-ui.js` adapts the corresponding menu and dialog interactions for the standalone plugin page.

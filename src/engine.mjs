@@ -6,6 +6,7 @@ import { Store, atomicWrite, magpieConfig } from './store.mjs';
 import { exists, fingerprint, inside, scanSource, AGENTS } from './skills.mjs';
 import { parseManifest } from './manifest.mjs';
 import { planProject, projectRoot, checkParents } from './plan.mjs';
+import { renderSkillDocument } from './skill-document.mjs';
 
 const BEGIN = '# >>> skill-workspaces: managed project skills >>>',
   END = '# <<< skill-workspaces <<<';
@@ -91,6 +92,17 @@ export class Engine {
       /* No Library */
     }
     return scanSource(resolved, { allowExternalLinks: resolved === library });
+  }
+  async readSkillDocument(source, relative) {
+    const scan = await this.scan(source);
+    const skill = scan.skills.find((entry) => entry.path === relative);
+    if (!skill) throw new Error('Choose a valid scanned skill');
+    const file = path.join(skill.dir, 'SKILL.md');
+    const info = await exists(file);
+    if (!info?.isFile() || info.isSymbolicLink() || info.size > 1024 * 1024)
+      throw new Error('SKILL.md must be a regular file under 1 MiB');
+    const text = await readFile(file, 'utf8');
+    return { name: skill.name, file: 'SKILL.md', path: file, text, ...renderSkillDocument(text) };
   }
   async status() {
     const state = await this.store.load();

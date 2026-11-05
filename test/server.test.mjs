@@ -38,6 +38,15 @@ test('HTTP service enforces token, Host, Origin and body limits', async (t) => {
     ).status,
     403,
   );
+  const reader = await fetch(s.url + 'api/skill/read', {
+    method: 'POST',
+    headers: { ...headers, Origin: 'null' },
+    body: JSON.stringify({ source: f.ssot, path: 'dev/sample-skill' }),
+  });
+  assert.equal(reader.status, 200);
+  assert.match((await reader.json()).html, /<p>Body/);
+  assert.equal((await fetch(s.url + 'native-ui.js', { headers: { Origin: 'null' } })).status, 200);
+  assert.equal((await fetch(s.url + 'vendor/magpie/components.css')).status, 200);
   const cors = await fetch(s.url + 'api/state', { headers: { ...headers, Origin: 'null' } });
   assert.equal(cors.status, 200);
   assert.equal(cors.headers.get('access-control-allow-origin'), 'null');

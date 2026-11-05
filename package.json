@@ -22,19 +22,19 @@
   "scripts": {
     "test": "node --test",
     "start": "node cli.mjs serve",
-    "check": "node --check index.mjs && node --check cli.mjs && node --check ui/app.js",
+    "check": "node --check index.mjs && node --check cli.mjs && node --check ui/app.js && node --check ui/native-ui.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "magpie": {
     "summary": {
       "en": "Deploy categorized skills to projects from a Git-tracked manifest",
-      "zh": "\u4ece\u5206\u7c7b\u6280\u80fd\u5e93\u548c\u9879\u76ee\u6e05\u5355\u540c\u6b65\u9879\u76ee\u7ea7\u6280\u80fd"
+      "zh": "从分类技能库和项目清单同步项目级技能"
     },
     "page": {
       "title": "Skill Workspaces",
       "titles": {
-        "zh": "\u6280\u80fd\u5de5\u4f5c\u533a"
+        "zh": "技能工作区"
       },
       "file": "page/index.html",
       "icon": "page/icon.svg",
@@ -48,6 +48,7 @@
     }
   },
   "dependencies": {
+    "markdown-it": "^15.0.3",
     "yaml": "^2.9.1"
   },
   "devDependencies": {

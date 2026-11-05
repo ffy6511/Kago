@@ -13,6 +13,12 @@
   --red: var(--magpie-red, #d64545);
   --amber: var(--magpie-amber, #b45309);
   --pill: color-mix(in srgb, var(--fg) 5%, var(--card));
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --card-2: color-mix(in srgb, var(--fg) 3%, var(--card));
+  --line-2: var(--line);
+  --faint: var(--muted);
+  --pop-bg: color-mix(in srgb, var(--card) 94%, transparent);
+  --shadow: 0 12px 40px #0002, 0 0 0 1px #00000006;
   --code: var(--magpie-code, ui-monospace, 'SF Mono', Menlo, monospace);
   color-scheme: light;
 }
@@ -100,7 +106,7 @@ hr {
   color: var(--muted);
   flex: none;
 }
-.project-picker select {
+.project-picker .project-choice {
   background: transparent;
   border-color: transparent;
   font-weight: 600;
@@ -144,12 +150,10 @@ hr {
   background: var(--pill);
   color: var(--fg);
 }
-.menu,
-.more-agents {
+.menu {
   position: relative;
 }
-.menu-items,
-.agent-popover {
+.menu-items {
   position: absolute;
   z-index: 5;
   right: 0;
@@ -226,14 +230,6 @@ hr {
   -webkit-mask: var(--i) center / contain no-repeat;
   mask: var(--i) center / contain no-repeat;
 }
-.agent-popover {
-  left: 0;
-  right: auto;
-  min-width: 260px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
 .seg {
   display: inline-flex;
   gap: 1px;
@@ -278,7 +274,7 @@ hr {
 .source-toolbar {
   margin-bottom: 9px;
 }
-.source-toolbar select {
+.source-toolbar .source-choice {
   width: 240px;
 }
 .source-toolbar input {
@@ -321,32 +317,19 @@ hr {
 .skill-info {
   flex: 1;
   min-width: 0;
-}
-.skill-info summary {
+  border: 0;
+  background: transparent;
+  border-radius: 4px;
+  padding: 1px 0;
+  text-align: left;
+  justify-content: flex-start;
   font-weight: 500;
-  list-style: none;
-  cursor: default;
+  white-space: normal;
   overflow-wrap: anywhere;
 }
-.skill-info summary::-webkit-details-marker {
-  display: none;
-}
-.skill-info summary:hover {
+.skill-info:hover {
+  background: transparent;
   color: var(--accent);
-}
-.skill-info[open] summary {
-  margin-bottom: 6px;
-}
-.skill-info p {
-  margin: 0 0 5px;
-  font-size: 12px;
-  color: var(--fg-2);
-  max-width: 75ch;
-}
-.skill-info code {
-  color: var(--muted);
-  font-size: 11px;
-  overflow-wrap: anywhere;
 }
 .skill-agents {
   flex: none;
@@ -468,7 +451,7 @@ hr {
   .state {
     display: none;
   }
-  .source-toolbar select {
+  .source-toolbar .source-choice {
     width: 40%;
   }
   .skill-row {
@@ -488,5 +471,142 @@ hr {
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
+    animation: none !important;
   }
+}
+
+/* The native popover/dialog rules are upstream; only workspace sizing lives here. */
+button,
+.icon-button,
+.lib-ag,
+.skill-row {
+  transition:
+    background-color 0.16s var(--ease),
+    color 0.16s var(--ease),
+    border-color 0.16s var(--ease),
+    box-shadow 0.16s var(--ease),
+    opacity 0.16s var(--ease);
+}
+.picker {
+  min-width: 0;
+  justify-content: space-between;
+}
+.picker span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.picker svg,
+.more-agents-button svg {
+  flex: none;
+  transition: transform 0.2s var(--ease);
+}
+.picker[aria-expanded='true'] svg,
+.more-agents-button[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.picker:hover,
+.picker.open {
+  background: var(--pill);
+}
+.pop.proto-menu {
+  max-width: calc(100vw - 16px);
+}
+.more-agents-button {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 3px 7px;
+}
+.more-agents-button:hover {
+  color: var(--fg);
+  background: var(--pill);
+}
+.project-settings {
+  margin-bottom: 0;
+}
+.extra-agents {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 0.24s var(--ease),
+    opacity 0.18s var(--ease);
+}
+.extra-agents > div {
+  min-height: 0;
+  overflow: hidden;
+}
+.extra-agents .lib-agents {
+  padding-top: 8px;
+}
+.extra-agents.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.view-tabs {
+  margin-top: 15px;
+}
+.category-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  font-size: 12px;
+  color: var(--fg-2);
+  padding: 3px 6px;
+}
+.category-all input {
+  margin: 0;
+}
+.skill-row:hover {
+  background: color-mix(in srgb, var(--fg) 2%, transparent);
+}
+.skill-row:first-child {
+  border-radius: 10px 10px 0 0;
+}
+.skill-row:last-child {
+  border-radius: 0 0 10px 10px;
+}
+.skill-row:only-child {
+  border-radius: 10px;
+}
+.lib-reader {
+  min-height: 0;
+}
+.lib-skillbody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.skill-file {
+  color: var(--muted);
+  font-size: 12px;
+  margin-left: auto;
+}
+.lib-reader .bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+}
+.lib-reader .bar code {
+  min-width: 0;
+  flex: 1;
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-mdview pre {
+  overflow-x: auto;
+}
+.lib-mdview table {
+  border-collapse: collapse;
+}
+.lib-mdview th,
+.lib-mdview td {
+  border: 1px solid var(--line);
+  padding: 5px 9px;
 }

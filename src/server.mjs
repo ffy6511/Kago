@@ -90,6 +90,14 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
           return send(200, await engine.removeSource(required(data.dir, 'source directory')));
         if (pathname === '/api/scan')
           return send(200, await engine.scan(required(data.dir, 'source directory')));
+        if (pathname === '/api/skill/read')
+          return send(
+            200,
+            await engine.readSkillDocument(
+              required(data.source, 'source directory'),
+              required(data.path, 'skill path'),
+            ),
+          );
         if (pathname === '/api/project/add')
           return send(
             200,
@@ -181,6 +189,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
       const assets = {
         '/': ['index.html', 'text/html; charset=utf-8'],
         '/app.js': ['app.js', 'text/javascript'],
+        '/native-ui.js': ['native-ui.js', 'text/javascript'],
         '/style.css': ['style.css', 'text/css'],
       };
       const nativeName = pathname.startsWith('/vendor/magpie/')
