@@ -97,6 +97,23 @@ test('HTTP service enforces token, Host, Origin and body limits', async (t) => {
     ).status,
     200,
   );
+  assert.equal(
+    (
+      await fetch(s.url + 'api/deployments', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dir: f.dir, source: f.ssot }),
+      })
+    ).status,
+    403,
+  );
+  const deployments = await fetch(s.url + 'api/deployments', {
+    method: 'POST',
+    headers: { ...headers, Origin: 'null' },
+    body: JSON.stringify({ dir: f.dir, source: f.ssot }),
+  });
+  assert.equal(deployments.status, 200);
+  assert.deepEqual((await deployments.json()).skills, []);
   const plan = await (
     await fetch(s.url + 'api/plan', {
       method: 'POST',

@@ -16,6 +16,7 @@
     more: ['更多', 'More'],
     moreAgents: ['更多 agent', 'More agents'],
     selectAll: ['全选', 'Select all'],
+    resetSelection: ['还原未保存的更改', 'Revert unsaved changes'],
     fewerAgents: ['收起', 'Fewer agents'],
     close: ['关闭', 'Close'],
     edit: ['编辑', 'Edit'],
@@ -51,6 +52,12 @@
     source: ['来源', 'Source'],
     unsaved: ['未保存', 'Unsaved'],
     saved: ['已保存', 'Saved'],
+    existing: ['已存在', 'Exists'],
+    willRemove: ['将移除', 'Will remove'],
+    externalDeployment: [
+      '非本插件托管的部署不会自动删除',
+      'Deployments not owned by this plugin are not removed automatically',
+    ],
     noManifest: ['未保存', 'Unsaved'],
     consistent: ['已同步', 'Synced'],
     pending: ['待同步', 'Pending'],
@@ -84,7 +91,9 @@
     project = null,
     source = null,
     scan = null,
+    deployments = { skills: [], problems: [] },
     detail = null,
+    selectionBaseline = null,
     entries = [],
     defaults = ['cursor'],
     method = 'link',
@@ -213,6 +222,53 @@
               : t('pending')
           : t('saved');
   }
+  function selectionChanged() {
+    return (
+      !!selectionBaseline &&
+      selectionBaseline.project === project?.dir &&
+      (text !== selectionBaseline.text || source !== selectionBaseline.source)
+    );
+  }
+  function updateResetButton() {
+    const button = $('[data-action="reset-selection"]');
+    if (button) button.disabled = !selectionChanged();
+  }
+  function rememberSelection() {
+    selectionBaseline = structuredClone({
+      project: project.dir,
+      source,
+      entries,
+      defaults,
+      method,
+      text,
+      dirty,
+      plan,
+    });
+    updateResetButton();
+  }
+  async function resetSelection() {
+    if (!selectionChanged()) return;
+    const baseline = structuredClone(selectionBaseline),
+      changedSource = source !== baseline.source;
+    if (changedSource) {
+      scan = await api('scan', { dir: baseline.source });
+      category = '';
+      query = '';
+    }
+    source = baseline.source;
+    entries = baseline.entries;
+    defaults = baseline.defaults;
+    method = baseline.method;
+    text = baseline.text;
+    dirty = baseline.dirty;
+    plan = baseline.plan;
+    manual = false;
+    if (changedSource) {
+      await loadDeployments();
+      render();
+    } else updateSkillSelection();
+    $('#category-all')?.focus({ preventScroll: true });
+  }
   function render() {
     window.workspaceUI.closeMenu();
     const status = projectStatus();
@@ -266,16 +322,108 @@
     );
     const categories = [...new Set((scan?.skills || []).map((s) => s.category))];
     return `<div class="source-toolbar"><button id="source-select" class="picker source-choice" data-action="source-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('source')}" title="${esc(source)}"><span>${esc(sourceTitle(source))}</span>${glyph('chevron')}</button><input type="search" id="search" aria-label="${t('search')}" placeholder="${t('search')}" value="${esc(query)}"></div>
-      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<label class="category-all"><input id="category-all" type="checkbox" ${!categorySkills().length ? 'disabled' : ''}><span>${t('selectAll')}</span></label>` : ''}</div>
-      ${(scan?.problems || []).map((p) => issue(p.error, p.path)).join('')}
+      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<div class="selection-actions"><button type="button" class="icon-button reset-selection" data-action="reset-selection" aria-label="${t('resetSelection')}" title="${t('resetSelection')}" ${selectionChanged() ? '' : 'disabled'}>${glyph('reset')}</button><label class="category-all"><input id="category-all" type="checkbox" ${!categorySkills().length ? 'disabled' : ''}><span>${t('selectAll')}</span></label></div>` : ''}</div>
+      ${[...(scan?.problems || []), ...deployments.problems].map((p) => issue(p.error, p.path)).join('')}
       <div class="skills">${
         list
           .map((s) => {
             const e = entries.find((e) => e.name === s.name && e.path === s.path);
-            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button>${e ? `<div class="skill-agents lib-agents" role="group" aria-label="${esc(s.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents ?? defaults).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(s.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>` : ''}</div>`;
+            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button>${deploymentTag(s, e)}${e ? skillAgents(e) : ''}</div>`;
           })
           .join('') || `<p class="empty">${t('noSkills')}</p>`
       }</div>`;
+  }
+  function skillAgents(e) {
+    return `<div class="skill-agents lib-agents" role="group" aria-label="${esc(e.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents ?? defaults).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(e.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(e.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>`;
+  }
+  function updateSkillSelection() {
+    document.querySelectorAll('.skill-row').forEach((row) => {
+      const input = row.querySelector('[data-skill]');
+      const entry = entries.find((e) => e.path === input.dataset.skill);
+      input.checked = !!entry;
+      row.classList.toggle('selected', !!entry);
+      let group = row.querySelector('.skill-agents');
+      if (entry && !group) {
+        row.insertAdjacentHTML('beforeend', skillAgents(entry));
+        group = row.querySelector('.skill-agents');
+        if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
+          group.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
+      }
+      if (entry && group) {
+        group.classList.remove('leaving');
+        group.inert = false;
+      }
+      if (!entry && group) {
+        group.classList.add('leaving');
+        group.inert = true;
+        const remove = () => {
+          if (group.classList.contains('leaving')) group.remove();
+        };
+        if (matchMedia('(prefers-reduced-motion: reduce)').matches) remove();
+        else setTimeout(remove, 200);
+      }
+    });
+    const all = $('#category-all'),
+      scope = categorySkills(),
+      count = scope.filter(isSelected).length;
+    if (all) {
+      all.checked = scope.length > 0 && count === scope.length;
+      all.indeterminate = count > 0 && count < scope.length;
+    }
+    updateAgentControls();
+  }
+  function deploymentTag(skill, entry) {
+    const found = deployments.skills.find((s) => s.name === skill.name && s.path === skill.path);
+    if (!found) return '';
+    const wanted = entry && (entry.agents ?? defaults).length > 0;
+    const paths = found.targets.map((target) => target.relative).join('\n');
+    const external = found.targets.some((target) => !target.managed);
+    return `<span class="deployment-tag ${wanted ? 'existing' : 'removing'}" title="${esc(paths + (external ? '\n' + t('externalDeployment') : ''))}" role="status">${t(wanted ? 'existing' : 'willRemove')}</span>`;
+  }
+  function updateDeploymentTags() {
+    document.querySelectorAll('.skill-row').forEach((row) => {
+      const skill = scan.skills.find(
+        (s) => s.path === row.querySelector('[data-skill]').dataset.skill,
+      );
+      const entry = entries.find((e) => e.name === skill.name && e.path === skill.path);
+      const tag = row.querySelector('.deployment-tag');
+      const wanted = entry && (entry.agents ?? defaults).length > 0;
+      if (tag) {
+        tag.classList.toggle('existing', !!wanted);
+        tag.classList.toggle('removing', !wanted);
+        tag.textContent = t(wanted ? 'existing' : 'willRemove');
+      }
+    });
+  }
+  async function loadDeployments({ seed = false, seedManaged = false } = {}) {
+    try {
+      deployments =
+        project && source
+          ? await api('deployments', { dir: project.dir, source })
+          : { skills: [], problems: [] };
+    } catch (error) {
+      deployments = { skills: [], problems: [{ path: project.dir, error: error.message }] };
+    }
+    let added = false;
+    if (seed)
+      for (const found of deployments.skills) {
+        if (entries.some((e) => e.name === found.name)) continue;
+        // An omission from a saved manifest of an owned output is already a
+        // persisted removal request. Do not silently undo it on reopening.
+        if (!seedManaged && found.targets.some((target) => target.managed)) continue;
+        const folders = new Set(
+          found.targets.map((target) => target.relative.slice(0, target.relative.lastIndexOf('/'))),
+        );
+        const agents = defaults.filter((agent) => folders.has(state.agents[agent]));
+        for (const target of found.targets)
+          if (!agents.some((agent) => target.agents.includes(agent))) agents.push(target.agents[0]);
+        const entry = { name: found.name, path: found.path };
+        if (agents.length !== defaults.length || agents.some((agent) => !defaults.includes(agent)))
+          entry.agents = agents;
+        entries.push(entry);
+        added = true;
+      }
+    return added;
   }
   function renderManifest() {
     return `<textarea id="manifest-editor" class="manifest-editor" spellcheck="false" aria-label="skills.manifest.yaml">${esc(text)}</textarea>`;
@@ -335,6 +483,7 @@
         const matches = scan.skills.filter((s) => s.name === e.name);
         if (matches.length === 1) e.path = matches[0].path;
       }
+    await loadDeployments();
     manual = false;
   }
   function setDirty() {
@@ -391,6 +540,7 @@
     document
       .querySelectorAll('[data-action="method"]')
       .forEach((button) => button.setAttribute('aria-pressed', button.dataset.value === method));
+    updateDeploymentTags();
     const status = $('#project-status');
     if (status) {
       status.textContent = projectStatus();
@@ -403,15 +553,17 @@
       t('skills') + (entries.length ? ` <span class="count">${entries.length}</span>` : '');
     if (tab === 'manifest') $('#manifest-editor').value = text;
     if (tab === 'plan') $('.workspace-view').innerHTML = renderPlan();
+    updateResetButton();
   }
-  async function draft({ initial = false, agentsOnly = false } = {}) {
+  async function draft({ initial = false, agentsOnly = false, selectionOnly = false } = {}) {
     const version = ++draftVersion;
     const result = await api('draft', { source, skills: entries, agents: defaults, method });
     if (version !== draftVersion) return;
     text = result.text;
     setDirty();
     if (initial) dirty = false;
-    if (agentsOnly) updateAgentControls();
+    if (selectionOnly) updateSkillSelection();
+    else if (agentsOnly) updateAgentControls();
     else render();
   }
   async function loadSource(dir, { reset = false } = {}) {
@@ -423,13 +575,12 @@
     }
     category = '';
     query = '';
-    if (reset && project) {
-      entries = [];
-      await draft();
-    }
-    render();
+    if (reset && project) entries = [];
+    await loadDeployments({ seed: reset, seedManaged: reset });
+    if (reset && project) await draft();
+    else render();
   }
-  async function selectProject(dir, { discard = false } = {}) {
+  async function selectProject(dir, { discard = false, seedExisting = true } = {}) {
     if (
       dirty &&
       !discard &&
@@ -473,6 +624,10 @@
         const matches = (scan?.skills || []).filter((s) => s.name === e.name);
         if (matches.length === 1) e.path = matches[0].path;
       }
+    const detectedAdded = await loadDeployments({
+      seed: seedExisting && !detail.parseError,
+      seedManaged: !detail.exists,
+    });
     if (detail.doc) {
       try {
         plan = await api('plan', { dir });
@@ -480,8 +635,9 @@
         detail.parseError = e.message;
       }
     }
-    if (!text && source) await draft({ initial: true });
+    if (source && (detectedAdded || !text)) await draft({ initial: !detail.exists });
     else render();
+    rememberSelection();
   }
   function toggle(array, value) {
     return array.includes(value) ? array.filter((v) => v !== value) : [...array, value];
@@ -591,6 +747,10 @@
         return;
       }
       if (!project) return;
+      if (a === 'reset-selection') {
+        await resetSelection();
+        return;
+      }
       if (['default-agent', 'method', 'skill-agent', 'inherit'].includes(a)) await formFromText();
       if (a === 'default-agent') {
         defaults = toggle(defaults, b.dataset.agent);
@@ -616,7 +776,7 @@
         savedText = text;
         dirty = false;
         await refresh();
-        await selectProject(project.dir, { discard: true });
+        await selectProject(project.dir, { discard: true, seedExisting: false });
         notice(t('saved'));
       }
       if (a === 'preview') {
@@ -629,6 +789,7 @@
         plan = r.ok ? await api('plan', { dir: project.dir }) : r;
         tab = 'plan';
         await refresh();
+        await loadDeployments();
         render();
         notice(
           r.ok ? (lang === 'zh' ? '项目技能已同步' : 'Project skills synced') : t('conflicts'),
@@ -640,6 +801,8 @@
         if (!window.confirm(t('keep') + '?')) return;
         await api('project/remove', { dir: project.dir, keep: true });
         project = null;
+        selectionBaseline = null;
+        deployments = { skills: [], problems: [] };
         detail = null;
         entries = [];
         text = savedText = '';
@@ -668,7 +831,7 @@
           entries = entries.filter(
             (e) => !scope.some((s) => s.name === e.name && s.path === e.path),
           );
-        await draft();
+        await draft({ selectionOnly: true });
       });
     }
     if (event.target.dataset.skill)
@@ -679,7 +842,7 @@
             throw new Error('Duplicate name; select a single source path');
           entries.push({ name: s.name, path: s.path });
         } else entries = entries.filter((e) => e.name !== s.name || e.path !== s.path);
-        await draft();
+        await draft({ selectionOnly: true });
       });
   });
   $('#app').addEventListener('input', (event) => {
@@ -701,6 +864,7 @@
       const actions = event.target.closest('main').querySelector('.workspace-header .actions');
       actions.querySelector('[data-action="save"]').disabled = !dirty;
       actions.querySelector('[data-action="apply"]').disabled = true;
+      updateResetButton();
     }
   });
   async function submitForm(form) {

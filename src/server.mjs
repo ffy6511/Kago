@@ -168,6 +168,11 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
         await registered();
         if (pathname === '/api/project/remove')
           return send(200, await engine.removeProject(data.dir, { keep: data.keep !== false }));
+        if (pathname === '/api/deployments')
+          return send(
+            200,
+            await engine.deployments(data.dir, required(data.source, 'source directory')),
+          );
         if (pathname === '/api/project') {
           const manifest = await engine.readManifest(data.dir);
           let doc, parseError;

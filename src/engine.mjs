@@ -7,6 +7,7 @@ import { exists, fingerprint, inside, scanSource, parseSkill, AGENTS } from './s
 import { parseManifest } from './manifest.mjs';
 import { planProject, projectRoot, checkParents } from './plan.mjs';
 import { renderSkillDocument } from './skill-document.mjs';
+import { detectDeployments } from './deployments.mjs';
 import { skillFiles, skillFile, MAX_SKILL_TEXT } from './skill-files.mjs';
 
 const BEGIN = '# >>> skill-workspaces: managed project skills >>>',
@@ -93,6 +94,12 @@ export class Engine {
       /* No Library */
     }
     return scanSource(resolved, { allowExternalLinks: resolved === library });
+  }
+  async deployments(dir, source) {
+    const root = await projectRoot(dir),
+      scan = await this.scan(source),
+      state = await this.store.load();
+    return detectDeployments({ dir: root, scan, inventory: state.inventories[root] || {} });
   }
   async resolveSkill(source, relative) {
     const scan = await this.scan(source);

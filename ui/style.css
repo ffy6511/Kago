@@ -706,3 +706,46 @@ button,
   opacity: 0;
   pointer-events: none;
 }
+
+.deployment-tag {
+  flex: none;
+  align-self: center;
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  transition:
+    color 0.18s var(--ease),
+    background-color 0.18s var(--ease);
+}
+.deployment-tag.existing {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 11%, transparent);
+}
+.deployment-tag.removing {
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+}
+
+.skill-agents {
+  transition: opacity 0.18s var(--ease);
+}
+.skill-agents.leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.selection-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.reset-selection:disabled {
+  opacity: 0.25;
+}
+.reset-selection:hover:not(:disabled) {
+  color: var(--fg);
+  background: var(--control-hover);
+}
