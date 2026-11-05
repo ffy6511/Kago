@@ -9,75 +9,50 @@
   const token = $('meta[name="page-token"]').content;
   let lang = new URLSearchParams(location.search).get('lang')?.startsWith('en') ? 'en' : 'zh';
   const words = {
-    projects: ['项目工作区', 'Projects'],
-    sources: ['技能来源', 'Skill sources'],
+    addProject: ['添加项目', 'Add project'],
+    addSource: ['添加来源', 'Add source'],
+    removeSource: ['移除来源', 'Remove source'],
+    cancel: ['取消', 'Cancel'],
+    more: ['更多', 'More'],
+    moreAgents: ['更多 agent', 'More agents'],
+    selection: ['选择操作', 'Selection'],
+    resetAgents: ['恢复项目默认', 'Reset to project defaults'],
+    projects: ['项目', 'Project'],
     add: ['添加', 'Add'],
-    register: ['注册', 'Register'],
     sourcePath: ['Skill 库根目录', 'Skill source root'],
     projectPath: ['Git 项目根目录', 'Git repository root'],
     manifestPath: ['清单路径（可选）', 'Manifest path (optional)'],
     library: ['读取 Magpie Library', 'Read Magpie Library'],
     sync: ['同步全部项目', 'Sync all projects'],
-    skills: ['技能选择', 'Skills'],
-    manifest: ['项目清单', 'Manifest'],
-    plan: ['同步计划', 'Sync plan'],
-    save: ['保存清单', 'Save manifest'],
-    preview: ['预览同步', 'Dry run'],
-    apply: ['应用同步', 'Apply'],
+    skills: ['技能', 'Skills'],
+    manifest: ['清单', 'Manifest'],
+    plan: ['变更', 'Changes'],
+    save: ['保存', 'Save'],
+    preview: ['预览', 'Preview'],
+    apply: ['同步', 'Sync'],
     open: ['打开文件夹', 'Open folder'],
     remove: ['取消托管', 'Unregister'],
     defaults: ['默认目标 agent', 'Default agents'],
     method: ['部署方式', 'Deployment method'],
     link: ['软链', 'Link'],
     copy: ['复制', 'Copy'],
-    search: ['搜索名称或描述…', 'Search names or descriptions…'],
-    all: ['全部分类', 'All categories'],
-    selected: ['已选', 'Selected'],
-    skill: ['Skill / 源路径', 'Skill / source path'],
+    search: ['搜索技能…', 'Search skills…'],
+    all: ['全部', 'All'],
     targets: ['项目级 agent', 'Project agents'],
     inherit: ['使用项目默认', 'Use project defaults'],
-    override: ['自定义', 'Override'],
-    chooseProject: ['选择一个项目开始配置', 'Choose a project to configure'],
-    chooseHelp: [
-      '注册 Git 项目，选择需要的 Skill，再将清单保存到项目仓库。',
-      'Register a Git repository, select its skills, and save the manifest in the project.',
-    ],
-    sourceHelp: [
-      '先添加一个分类 Skill 库，或读取已有的 Magpie Library。',
-      'Add a categorized skill source or read your Magpie Library.',
-    ],
-    global: [
-      '仅管理项目目录 · 全局 agent 开关由 Magpie Library 管理',
-      'Project folders only · Global agent switches stay in Magpie Library',
-    ],
-    noProjects: ['还没有注册项目', 'No projects registered'],
-    noSources: ['还没有注册来源', 'No sources registered'],
+    chooseProject: ['选择项目', 'Choose a project'],
     noSkills: ['没有匹配的 Skill', 'No matching skills'],
     source: ['来源', 'Source'],
-    unsaved: ['有未保存的修改', 'Unsaved changes'],
-    saved: ['已保存到项目', 'Saved to project'],
-    noManifest: ['尚未创建清单', 'No manifest yet'],
-    notApplied: ['尚未同步', 'Not synced yet'],
-    consistent: ['已与清单一致', 'Matches manifest'],
-    pending: ['有待同步的变更', 'Changes pending'],
+    unsaved: ['未保存', 'Unsaved'],
+    saved: ['已保存', 'Saved'],
+    noManifest: ['未保存', 'Unsaved'],
+    consistent: ['已同步', 'Synced'],
+    pending: ['待同步', 'Pending'],
     conflicts: ['存在冲突', 'Conflicts found'],
     keep: ['保留部署文件后取消托管', 'Unregister and keep deployed files'],
-    previewHelp: [
-      '先保存清单并预览，确认变更后再应用。',
-      'Save the manifest and preview its changes before applying.',
-    ],
-    sourceOnly: [
-      '正在浏览源库；选择项目后可部署选中的 Skill。',
-      'Browsing a source. Choose a project to deploy selected skills.',
-    ],
     reload: ['刷新', 'Refresh'],
     clear: ['清空选择', 'Clear selection'],
     pickAll: ['选择当前分类', 'Select category'],
-    unregister: ['取消注册', 'Unregister'],
-    yamlHint: [
-      '清单会进入 Git；部署产物默认加入忽略规则。',
-      'Commit the manifest to Git; generated deployments are ignored.',
-    ],
   };
   const t = (k) => words[k]?.[lang === 'zh' ? 0 : 1] || k,
     leaf = (p) => p.split(/[\\/]/).filter(Boolean).at(-1) || p;
@@ -156,88 +131,143 @@
   async function refresh() {
     state = await api('state');
   }
-  function chips(agents, current, action, extra = '') {
+  const agentIcons = {
+    cursor: 'cursor',
+    codex: 'codex-color',
+    opencode: 'opencode',
+    gemini: 'geminicli-color',
+    claude: 'claudecode-color',
+    pi: 'pi',
+    copilot: 'githubcopilot',
+    agy: 'antigravity-color',
+    kimi: 'kimi',
+    goose: 'goose',
+    grok: 'grok',
+    droid: 'factory',
+    cline: 'cline',
+    dsh: 'deepseek-color',
+    qoder: 'qoder',
+    'qoder-cn': 'qoder',
+    codebuddy: 'codebuddy-color',
+    commandcode: 'commandcode',
+  };
+  const primaryAgents = ['cursor', 'codex', 'opencode', 'gemini', 'claude'];
+  const glyphs = {
+    plus: 'M12 5v14M5 12h14',
+    more: 'M5 12h.01M12 12h.01M19 12h.01',
+    refresh: 'M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.6-2L20 8M4 16l2.3 3A7 7 0 0 0 18 17',
+    folder: 'M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z',
+    reset: 'M4 5v5h5M4.5 10a8 8 0 1 1 .8 7',
+  };
+  const glyph = (name) =>
+    `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${glyphs[name]}"/></svg>`;
+  function iconButton(action, label, icon) {
+    return `<button type="button" class="icon-button" data-action="${action}" aria-label="${esc(label)}" title="${esc(label)}">${glyph(icon)}</button>`;
+  }
+  function chips(agents, current, action, extra = '', compact = false) {
     return agents
-      .map(
-        (a) =>
-          `<button type="button" class="chip ${current.includes(a) ? 'on' : ''}" aria-pressed="${current.includes(a)}" data-action="${action}" data-agent="${esc(a)}" ${extra}>${esc(agentLabels[a] || a)}</button>`,
-      )
+      .map((a) => {
+        const name = agentIcons[a],
+          url = `./vendor/magpie/${name}.svg`;
+        const icon = name.endsWith('-color')
+          ? `<img src="${url}" alt="" draggable="false">`
+          : `<span class="mask" style="--i:url('${url}')"></span>`;
+        return `<button type="button" class="lib-ag ${current.includes(a) ? 'on' : ''}" aria-pressed="${current.includes(a)}" aria-label="${esc(agentLabels[a] || a)}" title="${esc(agentLabels[a] || a)}" data-action="${action}" data-agent="${esc(a)}" ${extra}><span class="ic" aria-hidden="true">${icon}</span>${compact ? '' : `<span>${esc(agentLabels[a] || a)}</span>`}</button>`;
+      })
       .join('');
   }
   function availableSources() {
     return [...new Set([...state.sources.map((s) => s.dir), ...(source ? [source] : [])])];
   }
+  function sourceTitle(dir) {
+    if (dir === state.library.dir) return 'Magpie Library';
+    return leaf(dir) === 'skills' ? leaf(dir.replace(/[\\/]skills\/?$/, '')) : leaf(dir);
+  }
+  function issue(error, relative = '') {
+    const parentLink = error.includes('Deployment parent is a symlink');
+    const title = parentLink
+      ? lang === 'zh'
+        ? '技能目录是整目录软链，迁移后才能同步。'
+        : 'Migrate the linked skills folder before syncing.'
+      : error;
+    return `<details class="issue"><summary>${esc(title)}</summary><code>${esc(relative ? relative + ': ' : '')}${esc(error)}</code></details>`;
+  }
   function render() {
-    const projectName = project ? leaf(project.dir) : 'Skill Workspaces';
-    const status = plan
-      ? !plan.ok
-        ? t('conflicts')
-        : plan.operations.every((o) => o.action === 'unchanged')
-          ? t('consistent')
-          : t('pending')
-      : detail?.exists
-        ? t('saved')
-        : t('noManifest');
-    $('#app').innerHTML =
-      `<div class="shell"><aside class="rail"><div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 4h7l2 3h9v13H3zM8 12l-2 2 2 2m8-4 2 2-2 2m-3-5-2 6"/></svg><strong>Skill Workspaces<span>Magpie · Project skills</span></strong></div>
- <section><div class="rail-heading">${t('projects')}<button class="ghost" data-action="project-form" aria-label="${t('register')} ${t('projects')}">+</button></div>${state.projects.map((p) => `<button class="rail-item ${project?.dir === p.dir ? 'active' : ''}" data-action="project" data-dir="${esc(p.dir)}" title="${esc(p.dir)}"><strong>${esc(leaf(p.dir))}</strong><small>${esc(state.lastSync[p.dir]?.time ? new Date(state.lastSync[p.dir].time).toLocaleString() : t('notApplied'))}</small></button>`).join('') || `<p class="rail-note">${t('noProjects')}</p>`}
- ${projectForm ? `<form id="project-add" class="rail-form"><input name="dir" aria-label="${t('projectPath')}" placeholder="${t('projectPath')}" required><input name="manifestPath" aria-label="${t('manifestPath')}" placeholder="${t('manifestPath')}"><button>${t('register')}</button></form>` : ''}</section>
- <section><div class="rail-heading">${t('sources')}<button class="ghost" data-action="source-form" aria-label="${t('add')} ${t('sources')}">+</button></div>${state.sources.map((s) => `<div class="source-item"><button class="rail-item ${source === s.dir ? 'active' : ''}" data-action="source" data-dir="${esc(s.dir)}" title="${esc(s.dir)}"><strong>${esc(leaf(s.dir))}</strong><small>${esc(s.dir)}</small></button><button class="ghost" data-action="source-remove" data-dir="${esc(s.dir)}" aria-label="${t('unregister')} ${esc(leaf(s.dir))}">×</button></div>`).join('') || `<p class="rail-note">${t('noSources')}</p>`}
- ${sourceForm ? `<form id="source-add" class="rail-form"><input name="dir" aria-label="${t('sourcePath')}" placeholder="${t('sourcePath')}" required><button>${t('register')}</button></form>` : ''}<button class="ghost" data-action="library" style="font-size:11px;margin-top:9px">${t('library')}</button></section><div class="rail-bottom"><p class="rail-note">${t('global')}</p><button class="ghost" data-action="sync" style="margin-top:10px">↻ ${t('sync')}</button></div></aside>
- <main class="main"><div class="topline"><span class="eyebrow">${t('projects')} / ${esc(projectName)}</span><div class="actions"><button class="ghost" data-action="refresh">↻ ${t('reload')}</button><button class="ghost" data-action="language">${lang === 'zh' ? 'English' : '中文'}</button></div></div>
- ${
-   project
-     ? `<div class="project-title"><div><h1>${esc(projectName)}</h1><p class="path">${esc(project.dir)}</p></div><div class="actions"><button class="ghost" data-action="reveal">${t('open')}</button><button class="ghost danger" data-action="project-remove" title="${t('keep')}">${t('remove')}</button></div></div>
- <div class="actions" style="margin-bottom:16px"><span id="project-status" class="badge ${plan?.ok ? 'good' : plan && !plan.ok ? 'bad' : ''}">${dirty ? t('unsaved') : status}</span><span class="muted" style="font-size:11px">${t('global')}</span></div>
- ${(detail?.conflicts || []).map((c) => `<div class="callout">${esc(c)}</div>`).join('')}${detail?.parseError ? `<div class="callout error">${esc(detail.parseError)}</div>` : ''}
- <div class="setup"><div class="setting-wide"><span class="setting-label">${t('defaults')}</span><div class="chips">${chips(['cursor', 'codex', 'opencode', 'gemini', 'claude'], defaults, 'default-agent')}</div><details style="margin-top:6px"><summary class="muted" style="font-size:10px">${lang === 'zh' ? '更多 agent' : 'More agents'}</summary><div class="chips" style="margin-top:6px">${chips(
-   Object.keys(state.agents).filter(
-     (a) => !['cursor', 'codex', 'opencode', 'gemini', 'claude'].includes(a),
-   ),
-   defaults,
-   'default-agent',
- )}</div></details></div><div><span class="setting-label">${t('method')}</span><div class="chips"><button data-action="method" data-value="link" class="chip ${method === 'link' ? 'on' : ''}">${t('link')}</button><button data-action="method" data-value="copy" class="chip ${method === 'copy' ? 'on' : ''}">${t('copy')}</button></div></div></div>
- <nav class="tabs" aria-label="Workspace views">${['skills', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" class="tab ${tab === k ? 'active' : ''}">${t(k)}${k === 'skills' ? ` <small>${entries.length}</small>` : ''}</button>`).join('')}</nav>`
-     : `<div class="browse-title"><h1>Skill Workspaces</h1><p class="muted" style="margin-top:8px">${source ? t('sourceOnly') : t('chooseHelp')}</p></div>`
- }
- ${project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}
- ${project ? `<div class="editor-bar"><small>${t('previewHelp')}</small><div class="actions"><button data-action="save" ${!dirty && detail?.exists ? 'disabled' : ''}>${t('save')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${dirty || !detail?.exists || !plan?.ok ? 'disabled' : ''}>${t('apply')}</button></div></div>` : ''}
- <footer class="foot"><span>${t('yamlHint')}</span><span>v0.1.0 · ${esc(state.configDir)}</span></footer></main></div>`;
+    const status = dirty
+      ? t('unsaved')
+      : !detail?.exists
+        ? t('noManifest')
+        : plan
+          ? !plan.ok
+            ? t('conflicts')
+            : plan.operations.every((o) => o.action === 'unchanged')
+              ? t('consistent')
+              : t('pending')
+          : t('saved');
+    $('#app').innerHTML = `<main class="workspace">
+      <header class="workspace-header">
+        <div class="project-picker">${glyph('folder')}<select id="project-select" aria-label="${t('projects')}" title="${esc(project?.dir || '')}"><option value="" ${!project ? 'selected' : ''}>${t('chooseProject')}</option>${state.projects.map((p) => `<option value="${esc(p.dir)}" ${project?.dir === p.dir ? 'selected' : ''}>${esc(leaf(p.dir))}</option>`).join('')}</select>${iconButton('project-form', t('addProject'), 'plus')}</div>
+        <div class="actions">
+          ${project ? `<span id="project-status" class="state ${plan && !plan.ok ? 'error' : ''}">${status}</span><button data-action="save" ${!dirty && detail?.exists ? 'disabled' : ''}>${t('save')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${dirty || !detail?.exists || !plan?.ok ? 'disabled' : ''}>${t('apply')}</button>` : ''}
+          <details class="menu"><summary class="icon-button" aria-label="${t('more')}" title="${t('more')}">${glyph('more')}</summary><div class="menu-items">
+            <button data-action="source-form">${t('addSource')}</button><button data-action="library">${t('library')}</button>
+            <button data-action="refresh">${t('reload')}</button><button data-action="sync">${t('sync')}</button>
+            ${source && state.sources.some((s) => s.dir === source) ? `<button data-action="source-remove" data-dir="${esc(source)}">${t('removeSource')}</button>` : ''}
+            ${project ? `<hr><button data-action="reveal">${t('open')}</button><button class="danger" data-action="project-remove">${t('remove')}</button>` : ''}
+          </div></details>
+        </div>
+      </header>
+      ${projectForm ? `<form id="project-add" class="add-form"><input name="dir" aria-label="${t('projectPath')}" placeholder="${t('projectPath')}" required><input name="manifestPath" aria-label="${t('manifestPath')}" placeholder="${t('manifestPath')}"><button type="button" data-action="submit-form">${t('add')}</button>${iconButton('project-form', t('cancel'), 'plus')}</form>` : ''}
+      ${sourceForm ? `<form id="source-add" class="add-form"><input name="dir" aria-label="${t('sourcePath')}" placeholder="${t('sourcePath')}" required><button type="button" data-action="submit-form">${t('add')}</button>${iconButton('source-form', t('cancel'), 'plus')}</form>` : ''}
+      ${(detail?.conflicts || []).map((c) => issue(c)).join('')}${detail?.parseError ? issue(detail.parseError) : ''}
+      ${
+        project
+          ? `<div class="project-settings"><div class="lib-agents" role="group" aria-label="${t('defaults')}">${chips(primaryAgents, defaults, 'default-agent')}<details class="more-agents"><summary class="icon-button" aria-label="${t('moreAgents')}" title="${t('moreAgents')}">${glyph('more')}</summary><div class="agent-popover">${chips(
+              Object.keys(state.agents).filter((a) => !primaryAgents.includes(a)),
+              defaults,
+              'default-agent',
+            )}</div></details></div><div class="seg" role="group" aria-label="${t('method')}">${['link', 'copy'].map((m) => `<button data-action="method" data-value="${m}" aria-pressed="${m === method}">${t(m)}</button>`).join('')}</div></div>
+      <nav class="view-tabs" aria-label="Workspace views">${['skills', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k)}${k === 'skills' && entries.length ? ` <span class="count">${entries.length}</span>` : ''}</button>`).join('')}</nav>`
+          : ''
+      }
+      ${project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}
+    </main>`;
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
   }
   function renderSkills() {
     if (!source)
-      return `<div class="empty"><h2>${t('chooseProject')}</h2><p>${t('sourceHelp')}</p><button data-action="source-form">+ ${t('add')} ${t('sources')}</button><button class="ghost" data-action="project-form">+ ${t('register')} ${t('projects')}</button></div>`;
+      return `<div class="empty"><button data-action="source-form">${glyph('plus')}${t('addSource')}</button><button data-action="library">${t('library')}</button></div>`;
     const list = (scan?.skills || []).filter(
       (s) =>
         (!category || s.category === category) &&
         (!query || `${s.name} ${s.description}`.toLowerCase().includes(query.toLowerCase())),
     );
     const categories = [...new Set((scan?.skills || []).map((s) => s.category))];
-    return `<div class="toolbar"><select aria-label="${t('source')}" id="source-select">${availableSources()
+    return `<div class="source-toolbar"><select id="source-select" aria-label="${t('source')}" title="${esc(source)}">${availableSources()
       .map(
         (s) =>
-          `<option value="${esc(s)}" ${s === source ? 'selected' : ''}>${esc(leaf(s))}</option>`,
+          `<option value="${esc(s)}" ${s === source ? 'selected' : ''}>${esc(sourceTitle(s))}</option>`,
       )
       .join(
         '',
-      )}</select><input type="search" id="search" aria-label="${t('search')}" placeholder="${t('search')}" value="${esc(query)}"><small>${t('selected')} ${entries.length} / ${scan?.skills?.length || 0}</small></div><div class="categories"><button class="category ${!category ? 'active' : ''}" data-action="category" data-value="">${t('all')}</button>${categories.map((c) => `<button class="category ${category === c ? 'active' : ''}" data-action="category" data-value="${esc(c)}">${esc(c)}</button>`).join('')}${project ? `<button class="ghost" data-action="pick-all" style="font-size:11px">${t('pickAll')}</button><button class="ghost" data-action="clear" style="font-size:11px">${t('clear')}</button>` : ''}</div>
- ${(scan?.problems || []).map((p) => `<div class="callout">${esc(p.path)} · ${esc(p.error)}</div>`).join('')}
- <div class="skills"><div class="skill-head"><span></span><span>${t('skill')}</span><span>${t('targets')}</span></div>${
-   list
-     .map((s) => {
-       const e = entries.find((e) => e.name === s.name && e.path === s.path);
-       return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><div><span class="skill-name">${esc(s.name)}</span><p class="skill-desc" title="${esc(s.description)}">${esc(s.description)}</p><p class="skill-path mono">${esc(s.path)}</p></div><div class="skill-agents">${e ? `<small><button class="ghost" data-action="inherit" data-name="${esc(s.name)}" style="font-size:10px;padding:0">${e.agents === undefined ? '↳ ' + t('inherit') : t('override') + ' ↺'}</button></small><div class="chips">${chips(['cursor', 'codex', 'opencode', 'gemini', 'claude'], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`)}</div>${e.agents?.some((a) => !['cursor', 'codex', 'opencode', 'gemini', 'claude'].includes(a)) ? `<small>${esc(e.agents.join(', '))}</small>` : ''}` : `<small>${project ? '—' : t('sourceOnly')}</small>`}</div></div>`;
-     })
-     .join('') || `<p class="empty">${t('noSkills')}</p>`
- }</div>`;
+      )}</select><input type="search" id="search" aria-label="${t('search')}" placeholder="${t('search')}" value="${esc(query)}"></div>
+      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<details class="menu"><summary class="icon-button" aria-label="${t('selection')}" title="${t('selection')}">${glyph('more')}</summary><div class="menu-items"><button data-action="pick-all">${t('pickAll')}</button><button data-action="clear">${t('clear')}</button></div></details>` : ''}</div>
+      ${(scan?.problems || []).map((p) => issue(p.error, p.path)).join('')}
+      <div class="skills">${
+        list
+          .map((s) => {
+            const e = entries.find((e) => e.name === s.name && e.path === s.path);
+            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><details class="skill-info"><summary>${esc(s.name)}</summary><p>${esc(s.description)}</p><code>${esc(s.path)}</code></details>${e ? `<div class="skill-agents lib-agents" role="group" aria-label="${esc(s.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents || []).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(s.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(s.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>` : ''}</div>`;
+          })
+          .join('') || `<p class="empty">${t('noSkills')}</p>`
+      }</div>`;
   }
   function renderManifest() {
-    return `<p class="path" style="margin-bottom:12px">${esc(detail?.file || 'skills.manifest.yaml')}</p><textarea id="manifest-editor" class="editor" spellcheck="false" aria-label="skills.manifest.yaml">${esc(text)}</textarea>`;
+    return `<textarea id="manifest-editor" class="manifest-editor" spellcheck="false" aria-label="skills.manifest.yaml">${esc(text)}</textarea>`;
   }
   function renderPlan() {
     if (!plan)
-      return `<div class="empty"><h2>${t('plan')}</h2><p>${t('previewHelp')}</p><button data-action="preview">${t('preview')}</button></div>`;
+      return `<div class="empty"><button data-action="preview">${t('preview')}</button></div>`;
     const labels = {
       create: ['新增', 'Create'],
       update: ['更新', 'Update'],
@@ -246,22 +276,10 @@
       unchanged: ['一致', 'Unchanged'],
       conflict: ['冲突', 'Conflict'],
     };
-    const counts = plan.operations.reduce(
-      (r, o) => ((r[o.action] = (r[o.action] || 0) + 1), r),
-      {},
+    const extraProblems = plan.problems.filter(
+      (p) => !plan.operations.some((o) => o.relative === p.relative && o.action === 'conflict'),
     );
-    return `<div class="summary">${Object.entries(counts)
-      .map(
-        ([k, v]) => `<span>${labels[k]?.[lang === 'zh' ? 0 : 1] || k} <strong>${v}</strong></span>`,
-      )
-      .join('')}</div>${plan.problems
-      .filter(
-        (p) => !plan.operations.some((o) => o.relative === p.relative && o.action === 'conflict'),
-      )
-      .map((p) => `<div class="callout error">${esc(p.error)}</div>`)
-      .join(
-        '',
-      )}<div class="plan">${plan.operations.map((o) => `<div class="plan-row ${o.action}"><span><span class="badge ${o.action === 'conflict' ? 'bad' : o.action === 'unchanged' ? 'good' : ''}">${labels[o.action]?.[lang === 'zh' ? 0 : 1]}</span></span><div><code>${esc(o.relative)}</code><p>${esc(o.error || o.source || '')}</p></div></div>`).join('') || `<p class="empty">${t('consistent')}</p>`}</div>`;
+    return `${extraProblems.map((p) => issue(p.error, p.relative)).join('')}<div class="plan">${plan.operations.map((o) => `<div class="plan-row ${o.action}"><span class="operation">${labels[o.action]?.[lang === 'zh' ? 0 : 1]}</span><div><code>${esc(o.relative)}</code>${o.error ? issue(o.error) : ''}</div></div>`).join('') || `<p class="empty">${t('consistent')}</p>`}</div>`;
   }
   async function formFromText() {
     if (!manual) return;
@@ -282,12 +300,13 @@
     dirty = text !== savedText;
     plan = null;
   }
-  async function draft() {
+  async function draft({ initial = false } = {}) {
     const version = ++draftVersion;
     const result = await api('draft', { source, skills: entries, agents: defaults, method });
     if (version !== draftVersion) return;
     text = result.text;
     setDirty();
+    if (initial) dirty = false;
     render();
   }
   async function loadSource(dir, { reset = false } = {}) {
@@ -312,8 +331,10 @@
       !window.confirm(
         lang === 'zh' ? '放弃尚未保存的清单修改？' : 'Discard unsaved manifest changes?',
       )
-    )
+    ) {
+      render();
       return;
+    }
     project = state.projects.find((p) => p.dir === dir);
     try {
       detail = await api('project', { dir });
@@ -354,7 +375,7 @@
         detail.parseError = e.message;
       }
     }
-    if (!text && source) await draft();
+    if (!text && source) await draft({ initial: true });
     else render();
   }
   function toggle(array, value) {
@@ -365,9 +386,8 @@
     if (!b) return;
     run(async () => {
       const a = b.dataset.action;
-      if (a === 'language') {
-        lang = lang === 'zh' ? 'en' : 'zh';
-        render();
+      if (a === 'submit-form') {
+        await submitForm(b.closest('form'));
         return;
       }
       if (a === 'project-form') {
@@ -389,24 +409,6 @@
       if (a === 'category') {
         category = b.dataset.value;
         render();
-        return;
-      }
-      if (a === 'project') {
-        await selectProject(b.dataset.dir);
-        return;
-      }
-      if (a === 'source') {
-        if (
-          project &&
-          dirty &&
-          !window.confirm(
-            lang === 'zh'
-              ? '切换来源会重新生成清单，继续？'
-              : 'Switch source and regenerate the manifest?',
-          )
-        )
-          return;
-        await loadSource(b.dataset.dir, { reset: !!project });
         return;
       }
       if (a === 'source-remove') {
@@ -521,6 +523,20 @@
     });
   });
   $('#app').addEventListener('change', (event) => {
+    if (event.target.id === 'project-select')
+      return run(async () => {
+        if (event.target.value) await selectProject(event.target.value);
+        else if (
+          !dirty ||
+          window.confirm(lang === 'zh' ? '放弃未保存的修改？' : 'Discard unsaved changes?')
+        ) {
+          project = null;
+          detail = null;
+          entries = [];
+          dirty = false;
+          render();
+        } else render();
+      });
     if (event.target.id === 'source-select')
       return run(() => loadSource(event.target.value, { reset: !!project }));
     if (event.target.dataset.skill)
@@ -548,31 +564,38 @@
       setDirty();
       if ($('#project-status')) {
         $('#project-status').textContent = dirty ? t('unsaved') : t('saved');
-        $('#project-status').className = 'badge';
+        $('#project-status').className = 'state';
       }
-      const actions = event.target.closest('main').querySelector('.editor-bar');
+      const actions = event.target.closest('main').querySelector('.workspace-header .actions');
       actions.querySelector('[data-action="save"]').disabled = !dirty;
       actions.querySelector('[data-action="apply"]').disabled = true;
     }
   });
+  async function submitForm(form) {
+    if (!form.reportValidity()) return;
+    const data = Object.fromEntries(new FormData(form));
+    if (form.id === 'source-add') {
+      const s = await api('source/add', data);
+      sourceForm = false;
+      await refresh();
+      await loadSource(s.root, { reset: !!project });
+    } else if (form.id === 'project-add') {
+      const p = await api('project/add', data);
+      projectForm = false;
+      await refresh();
+      await selectProject(p.dir);
+    }
+  }
+  $('#app').addEventListener('keydown', (event) => {
+    const form = event.target.closest('form');
+    if (form && event.key === 'Enter') {
+      event.preventDefault();
+      run(() => submitForm(form));
+    }
+  });
   $('#app').addEventListener('submit', (event) => {
     event.preventDefault();
-    const form = event.target,
-      data = Object.fromEntries(new FormData(form));
-    run(async () => {
-      if (form.id === 'source-add') {
-        const s = await api('source/add', data);
-        sourceForm = false;
-        await refresh();
-        await loadSource(s.root, { reset: !!project });
-      }
-      if (form.id === 'project-add') {
-        const p = await api('project/add', data);
-        projectForm = false;
-        await refresh();
-        await selectProject(p.dir);
-      }
-    });
+    run(() => submitForm(event.target));
   });
   window.addEventListener('beforeunload', (event) => {
     if (dirty) {
@@ -580,9 +603,22 @@
       event.returnValue = '';
     }
   });
-  const theme = new URLSearchParams(location.search).get('theme');
+  const queryTheme = new URLSearchParams(location.search).get('theme');
   document.documentElement.dataset.theme =
-    theme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    queryTheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  function hostTheme(theme) {
+    if (!theme) return;
+    lang = theme.lang?.startsWith('en') ? 'en' : 'zh';
+    if (state) render();
+  }
+  window.magpie?.onTheme(hostTheme);
+  if (window.magpie)
+    hostTheme(
+      await Promise.race([
+        window.magpie.ready,
+        new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
+      ]),
+    );
   await refresh();
   source = state.sources[0]?.dir || null;
   if (state.projects.length) await selectProject(state.projects[0].dir);

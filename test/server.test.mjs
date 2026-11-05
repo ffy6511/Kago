@@ -13,6 +13,13 @@ test('HTTP service enforces token, Host, Origin and body limits', async (t) => {
     html = await htmlResponse.text(),
     token = html.match(/name="page-token" content="([^"]+)"/)[1];
   assert.equal(htmlResponse.headers.get('access-control-allow-origin'), null);
+  const asset = await fetch(s.url + 'vendor/magpie/cursor.svg', { headers: { Origin: 'null' } });
+  assert.equal(asset.status, 200);
+  assert.equal(asset.headers.get('content-type'), 'image/svg+xml');
+  assert.equal(asset.headers.get('access-control-allow-origin'), 'null');
+  assert.equal((await fetch(s.url + 'vendor/magpie/unknown.svg')).status, 404);
+  const opaqueHTML = await fetch(s.url, { headers: { Origin: 'null' } });
+  assert.equal(opaqueHTML.headers.get('access-control-allow-origin'), null);
   assert.equal((await fetch(s.url + 'api/state')).status, 403);
   const hostStatus = await new Promise((resolve, reject) => {
     const req = http.get(s.url, { headers: { Host: 'attacker.example' } }, (res) => {

@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -29,6 +29,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
   if (!Number.isInteger(Number(port)) || Number(port) < 0 || Number(port) > 65535)
     throw new Error('Invalid port');
   const engine = new Engine({ configDir, magpieDir });
+  const nativeAssets = new Set(await readdir(new URL('vendor/magpie/', root)));
   const token = randomBytes(32).toString('hex');
   const server = http.createServer(async (req, res) => {
     const host = `127.0.0.1:${server.address().port}`;
@@ -182,7 +183,26 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
         '/app.js': ['app.js', 'text/javascript'],
         '/style.css': ['style.css', 'text/css'],
       };
-      if (!assets[pathname]) return send(404, { error: 'Not found' });
+      const nativeName = pathname.startsWith('/vendor/magpie/')
+        ? pathname.slice('/vendor/magpie/'.length)
+        : '';
+      if (/^[a-z0-9.-]+\.(svg|css|js)$/.test(nativeName) && nativeAssets.has(nativeName)) {
+        if (origin === 'null') {
+          headers['Access-Control-Allow-Origin'] = 'null';
+          headers.Vary = 'Origin';
+        }
+        const type = nativeName.endsWith('.svg')
+          ? 'image/svg+xml'
+          : nativeName.endsWith('.css')
+            ? 'text/css'
+            : 'text/javascript';
+        return send(
+          200,
+          await readFile(new URL('vendor/magpie/' + nativeName, root), 'utf8'),
+          type,
+        );
+      }
+      if (!Object.hasOwn(assets, pathname)) return send(404, { error: 'Not found' });
       const [file, type] = assets[pathname];
       const content = (await readFile(new URL(file, root), 'utf8')).replace(
         '__PAGE_TOKEN__',

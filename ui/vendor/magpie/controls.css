@@ -1,0 +1,44 @@
+/* Magpie Library agent chips (MIT). See LICENSE and NOTICE.md. */
+.lib-ag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  min-width: 26px;
+  padding: 0 5px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  color: var(--muted);
+  transition:
+    background 0.14s,
+    border-color 0.14s,
+    color 0.14s,
+    transform 0.14s var(--ease);
+}
+.lib-ag .ic {
+  width: 15px;
+  height: 15px;
+  filter: grayscale(1);
+  opacity: 0.35;
+  transition:
+    filter 0.14s,
+    opacity 0.14s;
+}
+.lib-ag:hover {
+  background: var(--pill);
+}
+.lib-ag:hover .ic {
+  opacity: 0.7;
+}
+.lib-ag.on {
+  background: var(--card);
+  border-color: var(--line);
+  color: var(--fg);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+}
+.lib-ag.on .ic {
+  filter: none;
+  opacity: 1;
+}

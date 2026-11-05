@@ -1,13 +1,13 @@
 # Workspace UI
 
-Open **Magpie → Plugins → Skill Workspaces** (技能工作区). The page runs in the official Magpie host; the package includes the loopback service it needs.
+Open **Magpie → Plugins → Skill Workspaces** (技能工作区).
 
-1. Add a categorized Skill source, or choose **Read Magpie Library**. Categories organize the browser; the containing folder and frontmatter identify each skill.
-2. Register a Git repository and, optionally, its manifest path.
-3. Select skills, choose default agents and link/copy mode. Each selected row can inherit the defaults or override the five primary agents. Additional agent IDs can be edited in YAML.
-4. Save the manifest, preview the sync plan, then Apply. Preview can inspect unsaved YAML, but Apply always reads the saved file again and validates current ownership.
-5. Use Sync all for all registered projects, or unregister a project while keeping its deployed files.
+1. Choose a project in the top selector, or use `+` to add one. Source registration and Magpie Library discovery are in the `…` menu.
+2. Choose a source and category, then check the skills to deploy. Click a skill name to inspect its description and path.
+3. The top agent chips set project defaults; selected rows offer the same agent icons for overrides. The reset icon returns a row to project defaults. Tooltips and accessible names identify every icon.
+4. Use **Save → Preview → Sync**. The Manifest and Changes tabs provide YAML editing and the deployment plan.
+5. The `…` menu offers refresh, sync-all, opening the project folder and unregistering while keeping deployed files.
 
-Chinese/English and light/dark themes are supported. The full manifest remains editable. Saving refuses to overwrite a manifest edited externally since it was loaded.
+The page uses Magpie's official page bridge, including its base control styles and live theme/language events after navigating to the local service. Library agent-chip rules and upstream SVG assets are bundled with attribution. Only the workspace layout is plugin-specific; the palette and font come from `--magpie-*` tokens. Standalone CLI previews use Magpie's standard light/dark defaults.
 
-The service accepts only loopback Host headers. APIs require a random token injected into its own page. Magpie's sandbox has opaque Origin `null`, so only API responses/preflights allow that origin; HTML does not carry CORS headers and the API still requires its token. Library metadata and skills are read as sources; project deployments are managed by this plugin, not Magpie's built-in Projects panel.
+The service accepts only loopback Host headers. APIs require a random token injected into its own HTML. Magpie's opaque-origin API and static icon requests allow Origin `null`; HTML never carries CORS headers. Library metadata is read as a source, while this plugin owns its own project deployments.
