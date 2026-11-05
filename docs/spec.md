@@ -1,6 +1,6 @@
 # Spec: Magpie Skill Workspaces — distributable plugin
 
-Status: approved for implementation · Revised: 2026-11-05
+Status: MVP implemented and locally installed · Revised: 2026-11-05
 
 ## 1. Product and delivery contract
 

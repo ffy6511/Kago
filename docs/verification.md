@@ -1,0 +1,18 @@
+# Verification — 2026-11-05
+
+Environment: macOS, official Magpie 0.1.3037, its Bun plugin host, and Node for the standalone test suite/CLI.
+
+## Completed checks
+
+- 17 automated tests pass: schema, scan, path, ownership, copy update, modified-output protection, whole-directory symlink conflict, manifest save concurrency, writer-lock, missing-output, stale-project removal, interruption recovery and HTTP boundaries.
+- HTTP token, untrusted Host/Origin, malformed JSON and request-size checks. Opaque-origin API responses work inside Magpie's page sandbox; HTML does not expose its token through CORS.
+- Real categorized SSOT: 26 valid skills in `blog` (4), `dev` (9), `obsidian` (7), `writing` (6); no scan problems.
+- Existing Magpie Library: 82 valid skills; no scan problems. Its settings and global agent switches were not changed.
+- Browser flow: register source/project, select `obsidian-markdown`, choose Cursor/Codex, save YAML, preview one deduplicated shared destination, Apply and verify an unchanged repeat preview. Verified official Magpie embedded page loading, English/dark mode and manual YAML-to-form editing with copy deployment.
+- Packaged host flow: `npm pack`, extract into a clean directory, install locally into an isolated official Magpie configuration, and load the host service. In that Magpie/Bun host, deploy all seven real Obsidian skills to 14 shared/Claude destinations, repeat Apply, convert links to copies and clean owned outputs.
+- The daily-use desktop app has the local checkout installed and enabled. Its page opens with the real source and ob-notes registration; no development server is needed.
+- ob-notes read-only acceptance reports the existing whole-directory `.agents/skills` symlink conflict and preserves it. No manifest or deployment files were written into ob-notes during acceptance; only the requested inbox spec was rewritten.
+
+## Boundaries
+
+Earlier Magpie versions, Windows/Linux native filesystem behavior and remote `magpie web` access were not validated. The plugin does not mutate Magpie's built-in Projects registry. Existing deployment ownership is not imported. Group aliases, version pins and lock-file interoperability are deferred. Source skills with nested symlinks require adjustment before deployment.
