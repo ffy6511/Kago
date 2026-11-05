@@ -37,7 +37,6 @@
         "zh": "技能工作区"
       },
       "file": "page/index.html",
-      "icon": "page/icon.svg",
       "service": {
         "port": 3498,
         "option": "port"
