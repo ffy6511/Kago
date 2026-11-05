@@ -53,6 +53,9 @@ export async function readSkill(dir) {
   if (!info.isFile() || info.size > 1024 * 1024)
     throw new Error(`SKILL.md must be a regular file under 1 MiB: ${dir}`);
   const text = await readFile(file, 'utf8');
+  return parseSkill(text, name);
+}
+export function parseSkill(text, name) {
   const match = text.replace(/^\uFEFF/, '').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
   if (!match) throw new Error(`Missing YAML frontmatter: ${name}`);
   const meta = yaml(match[1]);

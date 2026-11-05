@@ -17,7 +17,7 @@ This file is the entry point for agents working in this repository. Keep it focu
 - `ui/` contains the client, host-theme integration and interaction adapters. `ui/vendor/magpie/` contains attributed upstream styles, bridge code and icons.
 - `src/server.mjs` serves the local page and APIs. Keep it loopback-only and preserve token, Host, Origin, request-size and content-safety boundaries, including opaque-origin sandbox support.
 - `src/engine.mjs` coordinates operations; `src/manifest.mjs`, `src/skills.mjs`, `src/plan.mjs` and `src/store.mjs` handle validation, scanning, planning and durable ownership. `src/skill-document.mjs` renders document previews. `cli.mjs` and the UI use the same engine.
-- The project manifest is versioned intent. Registration, ownership and recovery state are machine-local. Magpie Library is a read-only source; do not rewrite its registry, change global agent switches or adopt its outputs implicitly.
+- The project manifest is versioned intent. Registration, ownership and recovery state are machine-local. Magpie Library metadata is read-only; source-file edits require an explicit user save; do not rewrite its registry, change global agent switches or adopt its outputs implicitly.
 - Preview must remain read-only. Apply must validate before writing, deduplicate shared destinations and preserve locking, recovery and fingerprint checks. Never replace unmanaged or locally modified files, or automatically migrate whole-directory symlinks.
 
 ## UI principles

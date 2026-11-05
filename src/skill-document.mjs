@@ -28,8 +28,17 @@ markdown.core.ruler.after('inline', 'document-links', (state) => {
 export function renderSkillDocument(text) {
   const normalized = text.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n');
   const match = normalized.match(/^---\n([\s\S]*?)\n---[ \t]*(?:\n|$)/);
+  let metadata = {};
+  if (match) {
+    try {
+      const value = yaml(match[1]);
+      if (value && typeof value === 'object' && !Array.isArray(value)) metadata = value;
+    } catch {
+      return { metadata: {}, html: markdown.render(normalized) };
+    }
+  }
   return {
-    metadata: match ? yaml(match[1]) : {},
+    metadata,
     html: markdown.render(match ? normalized.slice(match[0].length) : normalized),
   };
 }

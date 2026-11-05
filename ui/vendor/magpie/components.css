@@ -87,3 +87,9 @@
 .lib-fm { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 3px 12px; margin: 0 0 12px; padding: 0 0 10px; border-bottom: 1px solid var(--line-2); font-size: 12px; line-height: 1.5; }
 .lib-fm dt { color: var(--faint); }
 .lib-fm dd { margin: 0; color: var(--fg-2); overflow-wrap: anywhere; }
+
+/* Native Library path and file editor rules. */
+.lib-path { font: var(--code-style, normal) var(--code-weight, 400) 11px var(--code-font, var(--code)); font-stretch: var(--code-stretch, 100%); color: var(--muted); padding: 0; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; border-radius: 3px; }
+.lib-path:hover { color: var(--fg); text-decoration: underline; text-underline-offset: 2px; }
+.lib-text.lib-skilltext { height: min(60vh, 520px); min-height: 200px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.lib-text.lib-skilltext:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }

@@ -10,3 +10,5 @@ Source: https://github.com/yetone/magpie (MIT; license included).
 Runtime theme values come directly from Magpie's bridge. No parent DOM access or Magpie internal API access is required.
 
 `components.css` contains the native popup/protocol menu, modal/editor, and Library Skill reader rules from `internal/gui/assets/app.css` and `internal/gui/assets/plugins/library/library.css`. `ui/native-ui.js` adapts the corresponding menu and dialog interactions for the standalone plugin page.
+
+The file picker, path link and file editor also follow `viewSkill`, `pathLink` and their associated Library rules. `ui/skill-reader.js` adapts those interactions to this plugin’s source-file API; it does not expose Magpie’s private Library mutation API.

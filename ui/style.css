@@ -610,3 +610,69 @@ button,
   border: 1px solid var(--line);
   padding: 5px 9px;
 }
+
+/* Keep the upstream menu's content aligned at its leading edge. */
+.proto-menu .pm-item {
+  justify-content: flex-start;
+}
+.proto-menu .pm-words {
+  text-align: left;
+}
+.category-tabs button:hover {
+  background: var(--pill);
+  color: var(--fg);
+}
+.category-tabs button[aria-selected='true']:hover {
+  background: color-mix(in srgb, var(--accent) 15%, var(--card));
+  color: var(--accent);
+}
+.lib-reader .ehead b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lib-reader .lib-filepick {
+  flex: 0 1 auto;
+  margin-right: auto;
+}
+.lib-reader .lib-glyph {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  color: var(--fg-2);
+}
+.lib-reader .lib-text {
+  width: 100%;
+  padding: 12px 14px;
+  font: 12px/1.6 var(--code);
+  resize: vertical;
+}
+.lib-reader .bar .grow {
+  flex: 1;
+}
+.lib-reader .bar .lib-path {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 70%;
+  border: 0;
+  background: transparent;
+  display: block;
+  justify-content: flex-start;
+}
+.lib-reader .editor-error {
+  margin: 0;
+  color: var(--red);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .lib-reader .bar {
+    gap: 8px;
+  }
+  .lib-reader .bar .lib-path {
+    max-width: 45%;
+  }
+}

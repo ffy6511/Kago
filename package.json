@@ -22,7 +22,7 @@
   "scripts": {
     "test": "node --test",
     "start": "node cli.mjs serve",
-    "check": "node --check index.mjs && node --check cli.mjs && node --check ui/app.js && node --check ui/native-ui.js",
+    "check": "node --check index.mjs && node --check cli.mjs && node --check ui/app.js && node --check ui/native-ui.js && node --check ui/skill-reader.js",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

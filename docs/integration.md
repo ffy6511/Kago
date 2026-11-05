@@ -6,6 +6,7 @@ Verified on 2026-11-05 against local Magpie 0.1.3037 and upstream `internal/libr
 - The installed `magpie library --help` exposes no project mutation commands. The plugin therefore reads Library sources and projects and owns its own project deployments. It does not write `library.json`, invoke undocumented GUI writes, or change global agent switches.
 - `cursor`, `codex`, `opencode`, `gemini` share `.agents/skills`; `claude` uses `.claude/skills`. Shared paths must be deduplicated. Additional supported mappings follow upstream.
 - Library discovery reads `$XDG_CONFIG_HOME/magpie/library.json` and `library/skills`, or the normal `~/.config/magpie` location. Config paths can be overridden for portable installations.
+- Skill file browsing/editing uses the plugin’s own validated source-file APIs. Explicit saves update existing UTF-8 files within a scanned skill, preserve modes and reject stale editor content; Library registry and global switches remain untouched.
 - Package source remains private; npm publication and marketplace registry submission are later release actions. The package has no dependency on a public npm scope for local installation.
 
 References: https://github.com/magpie-community/plugins/tree/main/packages/chat and https://github.com/yetone/magpie/blob/main/internal/library/projects.go

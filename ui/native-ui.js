@@ -145,7 +145,7 @@
       preventScroll: true,
     });
   }
-  function showModal(content, title, anchor) {
+  function showModal(content, title, anchor, options = {}) {
     closeMenu();
     if (modal) modal.remove();
     const overlay = document.createElement('div');
@@ -164,9 +164,15 @@
     app.inert = true;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    let closing = false;
+    let closing = false,
+      checking = false;
     const close = async () => {
-      if (closing) return;
+      if (closing || checking) return;
+      checking = true;
+      if (options.canClose && !(await options.canClose())) {
+        checking = false;
+        return;
+      }
       closing = true;
       closeMenu();
       overlay.classList.add('out');
@@ -189,6 +195,7 @@
       document.body.style.overflow = previousOverflow;
       modal = null;
       anchor?.focus({ preventScroll: true });
+      options.onClosed?.();
     };
     overlay.close = close;
     overlay.addEventListener('pointerdown', (e) => {
@@ -203,7 +210,9 @@
       }
       if (e.key === 'Tab') {
         const controls = [
-          ...dialog.querySelectorAll('button:not(:disabled),a[href],input,textarea,[tabindex="0"]'),
+          ...dialog.querySelectorAll(
+            'button:not(:disabled),a[href],input:not(:disabled),textarea:not(:disabled),[tabindex="0"]',
+          ),
         ];
         const first = controls[0],
           last = controls.at(-1);
@@ -216,7 +225,9 @@
         }
       }
     });
-    content.querySelector('[data-close-modal]')?.addEventListener('click', close);
+    content.addEventListener('click', (e) => {
+      if (e.target.closest('[data-close-modal]')) close();
+    });
     overlay.animate([{ opacity: 0 }, { opacity: 1 }], {
       duration: calm() ? 0 : 220,
       easing: 'ease-out',

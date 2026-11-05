@@ -18,6 +18,10 @@
     selectAll: ['全选', 'Select all'],
     fewerAgents: ['收起', 'Fewer agents'],
     close: ['关闭', 'Close'],
+    edit: ['编辑', 'Edit'],
+    files: ['文件', 'Files'],
+    showFolder: ['在文件管理器中打开文件夹', 'Open folder in file manager'],
+    discardFile: ['放弃尚未保存的文件修改？', 'Discard unsaved file changes?'],
     resetAgents: ['恢复项目默认', 'Reset to project defaults'],
     projects: ['项目', 'Project'],
     add: ['添加', 'Add'],
@@ -97,7 +101,8 @@
     moreAgentsOpen = false,
     draftVersion = 0,
     manual = false;
-  let noticeTimer;
+  let noticeTimer,
+    skillEditorDirty = () => false;
   function notice(message, error = false) {
     const el = $('#notice');
     clearTimeout(noticeTimer);
@@ -160,6 +165,7 @@
     folder: 'M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z',
     reset: 'M4 5v5h5M4.5 10a8 8 0 1 1 .8 7',
     chevron: 'm8 10 4 4 4-4',
+    file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h6',
   };
   const glyph = (name) =>
     `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${glyphs[name]}"/></svg>`;
@@ -288,17 +294,30 @@
     return `${extraProblems.map((p) => issue(p.error, p.relative)).join('')}<div class="plan">${plan.operations.map((o) => `<div class="plan-row ${o.action}"><span class="operation">${labels[o.action]?.[lang === 'zh' ? 0 : 1]}</span><div><code>${esc(o.relative)}</code>${o.error ? issue(o.error) : ''}</div></div>`).join('') || `<p class="empty">${t('consistent')}</p>`}</div>`;
   }
   async function previewSkill(anchor) {
-    const skill = await api('skill/read', { source, path: anchor.dataset.path });
-    const reader = document.createElement('div');
-    reader.className = 'editor lib-editor lib-reader lib-skillfile';
-    const metadata = Object.entries(skill.metadata)
-      .map(
-        ([key, value]) =>
-          `<dt>${esc(key)}</dt><dd>${esc(typeof value === 'object' ? JSON.stringify(value) : value)}</dd>`,
-      )
-      .join('');
-    reader.innerHTML = `<div class="ehead"><b>${esc(skill.name)}</b><span class="skill-file">SKILL.md</span></div><div class="lib-skillbody"><div class="lib-mdview">${metadata ? `<dl class="lib-fm">${metadata}</dl>` : ''}${skill.html}</div></div><div class="bar"><code title="${esc(skill.path)}">${esc(skill.path)}</code><button data-close-modal>${t('close')}</button></div>`;
-    window.workspaceUI.showModal(reader, reader.querySelector('.ehead b'), anchor);
+    await window.openSkillReader({
+      api,
+      esc,
+      t,
+      glyph,
+      source,
+      path: anchor.dataset.path,
+      anchor,
+      onDirty: (check) => {
+        skillEditorDirty = check;
+      },
+      onSaved: async () => {
+        scan = await api('scan', { dir: source });
+        plan = null;
+      },
+      onClosed: () => {
+        render();
+        $('#app')
+          .querySelector(
+            `[data-action="skill-preview"][data-path="${CSS.escape(anchor.dataset.path)}"]`,
+          )
+          ?.focus({ preventScroll: true });
+      },
+    });
   }
   async function formFromText() {
     if (!manual) return;
@@ -406,25 +425,9 @@
     if (b.dataset.action === 'project-picker') {
       window.workspaceUI.popup(
         b,
-        [
-          { value: '', label: t('chooseProject') },
-          ...state.projects.map((p) => ({ value: p.dir, label: leaf(p.dir) })),
-        ],
+        state.projects.map((p) => ({ value: p.dir, label: leaf(p.dir) })),
         project?.dir || '',
-        (dir) =>
-          run(async () => {
-            if (dir) await selectProject(dir);
-            else if (
-              !dirty ||
-              window.confirm(lang === 'zh' ? '放弃未保存的修改？' : 'Discard unsaved changes?')
-            ) {
-              project = null;
-              detail = null;
-              entries = [];
-              dirty = false;
-              render();
-            }
-          }),
+        (dir) => run(() => selectProject(dir)),
         t('projects'),
       );
       return;
@@ -660,7 +663,7 @@
     run(() => submitForm(event.target));
   });
   window.addEventListener('beforeunload', (event) => {
-    if (dirty) {
+    if (dirty || skillEditorDirty()) {
       event.preventDefault();
       event.returnValue = '';
     }

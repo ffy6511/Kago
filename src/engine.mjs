@@ -3,10 +3,11 @@ import { mkdir, readFile, realpath, rename, rm, symlink, cp } from 'node:fs/prom
 import { randomUUID } from 'node:crypto';
 import { stringify } from 'yaml';
 import { Store, atomicWrite, magpieConfig } from './store.mjs';
-import { exists, fingerprint, inside, scanSource, AGENTS } from './skills.mjs';
+import { exists, fingerprint, inside, scanSource, parseSkill, AGENTS } from './skills.mjs';
 import { parseManifest } from './manifest.mjs';
 import { planProject, projectRoot, checkParents } from './plan.mjs';
 import { renderSkillDocument } from './skill-document.mjs';
+import { skillFiles, skillFile, MAX_SKILL_TEXT } from './skill-files.mjs';
 
 const BEGIN = '# >>> skill-workspaces: managed project skills >>>',
   END = '# <<< skill-workspaces <<<';
@@ -93,16 +94,45 @@ export class Engine {
     }
     return scanSource(resolved, { allowExternalLinks: resolved === library });
   }
-  async readSkillDocument(source, relative) {
+  async resolveSkill(source, relative) {
     const scan = await this.scan(source);
     const skill = scan.skills.find((entry) => entry.path === relative);
     if (!skill) throw new Error('Choose a valid scanned skill');
-    const file = path.join(skill.dir, 'SKILL.md');
-    const info = await exists(file);
-    if (!info?.isFile() || info.isSymbolicLink() || info.size > 1024 * 1024)
-      throw new Error('SKILL.md must be a regular file under 1 MiB');
-    const text = await readFile(file, 'utf8');
-    return { name: skill.name, file: 'SKILL.md', path: file, text, ...renderSkillDocument(text) };
+    return skill;
+  }
+  async readSkillDocument(source, relative, file = 'SKILL.md') {
+    const skill = await this.resolveSkill(source, relative);
+    const document = await skillFile(skill.dir, file);
+    return {
+      name: skill.name,
+      file,
+      path: document.file,
+      directory: skill.dir,
+      files: await skillFiles(skill.dir),
+      text: document.text,
+      ...(/\.(md|markdown)$/i.test(file)
+        ? renderSkillDocument(document.text)
+        : { metadata: {}, html: null }),
+    };
+  }
+  async saveSkillDocument(source, relative, file, text, expectedText) {
+    if (
+      typeof text !== 'string' ||
+      typeof expectedText !== 'string' ||
+      Buffer.byteLength(text) > MAX_SKILL_TEXT ||
+      Buffer.byteLength(expectedText) > MAX_SKILL_TEXT ||
+      text.includes('\0')
+    )
+      throw new Error('Expected UTF-8 text under 1 MiB');
+    await this.store.lock(async () => {
+      const skill = await this.resolveSkill(source, relative);
+      const current = await skillFile(skill.dir, file);
+      if (current.text !== expectedText)
+        throw new Error('File changed outside this editor; reopen it before saving');
+      if (file === 'SKILL.md') parseSkill(text, skill.name);
+      await atomicWrite(current.file, text, current.info.mode & 0o777);
+    });
+    return this.readSkillDocument(source, relative, file);
   }
   async status() {
     const state = await this.store.load();

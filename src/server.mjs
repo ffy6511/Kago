@@ -7,23 +7,39 @@ import { Engine } from './engine.mjs';
 import { parseManifest } from './manifest.mjs';
 import { checkParents } from './plan.mjs';
 const root = new URL('../ui/', import.meta.url);
-async function body(req) {
-  if (Number(req.headers['content-length']) > 1024 * 1024) {
+async function body(req, limit = 1024 * 1024) {
+  if (Number(req.headers['content-length']) > limit) {
     req.resume();
-    throw Object.assign(new Error('Request body exceeds 1 MiB'), { status: 413 });
+    throw Object.assign(new Error(`Request body exceeds ${limit / 1024 / 1024} MiB`), {
+      status: 413,
+    });
   }
   let size = 0;
   const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 1024 * 1024)
-      throw Object.assign(new Error('Request body exceeds 1 MiB'), { status: 413 });
+    if (size > limit)
+      throw Object.assign(new Error(`Request body exceeds ${limit / 1024 / 1024} MiB`), {
+        status: 413,
+      });
     chunks.push(chunk);
   }
   const data = JSON.parse(Buffer.concat(chunks).toString() || '{}');
   if (!data || typeof data !== 'object' || Array.isArray(data))
     throw new Error('Expected a JSON object');
   return data;
+}
+async function openFolder(dir) {
+  const child = spawn(
+    process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'explorer' : 'xdg-open',
+    [dir],
+    { stdio: 'ignore' },
+  );
+  await new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('spawn', resolve);
+  });
+  child.unref();
 }
 export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
   if (!Number.isInteger(Number(port)) || Number(port) < 0 || Number(port) > 65535)
@@ -72,7 +88,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
         if (req.method === 'GET' && pathname === '/api/state')
           return send(200, await engine.status());
         if (req.method !== 'POST') return send(405, { error: 'Use POST for this operation' });
-        const data = await body(req);
+        const data = await body(req, pathname === '/api/skill/save' ? 16 * 1024 * 1024 : undefined);
         const required = (value, label) => {
           if (typeof value !== 'string' || !value.trim() || value.includes('\0'))
             throw new Error(`Missing or invalid ${label}`);
@@ -96,8 +112,28 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
             await engine.readSkillDocument(
               required(data.source, 'source directory'),
               required(data.path, 'skill path'),
+              data.file === undefined ? 'SKILL.md' : required(data.file, 'skill file'),
             ),
           );
+        if (pathname === '/api/skill/save')
+          return send(
+            200,
+            await engine.saveSkillDocument(
+              required(data.source, 'source directory'),
+              required(data.path, 'skill path'),
+              required(data.file, 'skill file'),
+              data.text,
+              data.expectedText,
+            ),
+          );
+        if (pathname === '/api/skill/reveal') {
+          const skill = await engine.resolveSkill(
+            required(data.source, 'source directory'),
+            required(data.path, 'skill path'),
+          );
+          await openFolder(skill.dir);
+          return send(200, { ok: true });
+        }
         if (pathname === '/api/project/add')
           return send(
             200,
@@ -126,20 +162,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
             )
           )
             throw new Error('Only registered folders can be opened');
-          const child = spawn(
-            process.platform === 'darwin'
-              ? 'open'
-              : process.platform === 'win32'
-                ? 'explorer'
-                : 'xdg-open',
-            [dir],
-            { stdio: 'ignore' },
-          );
-          await new Promise((resolve, reject) => {
-            child.once('error', reject);
-            child.once('spawn', resolve);
-          });
-          child.unref();
+          await openFolder(dir);
           return send(200, { ok: true });
         }
         await registered();
@@ -190,6 +213,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
         '/': ['index.html', 'text/html; charset=utf-8'],
         '/app.js': ['app.js', 'text/javascript'],
         '/native-ui.js': ['native-ui.js', 'text/javascript'],
+        '/skill-reader.js': ['skill-reader.js', 'text/javascript'],
         '/style.css': ['style.css', 'text/css'],
       };
       const nativeName = pathname.startsWith('/vendor/magpie/')
