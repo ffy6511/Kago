@@ -44,7 +44,7 @@ Cursor, Codex, OpenCode and Gemini CLI share `.agents/skills`; Claude Code uses 
 ## File safety and coexistence
 
 - Dry run never writes project files. Apply rechecks all destinations and refuses unmanaged collisions before placing anything.
-- Ownership fingerprints protect locally edited copies and replaced symlinks. Removed entries clean only unchanged outputs recorded by this plugin.
+- Ownership fingerprints protect locally edited copies and replaced symlinks. A target that exactly matches the intended output is adopted and re-recorded, so an equivalent manual replacement does not stay blocked. Removed entries clean only unchanged outputs recorded by this plugin.
 - Apply journals each replacement, so an interrupted operation can reconcile ownership before continuing. Cross-process locking serializes CLI and page writes. Filesystem writes assume cooperative local processes; actively hostile concurrent filesystem changes are outside this tool's guarantees.
 - A symlinked `.agents/skills` parent blocks Apply. Back up and migrate the whole-directory link manually; the plugin never does that automatically.
 - Relative symlinks can still point outside the workspace. Choose **copy** for restricted agents or repositories that need self-contained skill files. V1 refuses nested symlinks inside individual source skills.

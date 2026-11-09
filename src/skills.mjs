@@ -125,7 +125,8 @@ export async function scanSource(source, { allowExternalLinks = false } = {}) {
 }
 
 // Hash link text without following it, so replaced links and local copy edits are detectable.
-export async function fingerprint(file, { source = false } = {}) {
+// Leaving out modes yields a content-only hash that tells permission drift apart from edits.
+export async function fingerprint(file, { source = false, modes = true } = {}) {
   const info = await exists(file);
   if (!info) return null;
   const hash = createHash('sha256');
@@ -136,11 +137,15 @@ export async function fingerprint(file, { source = false } = {}) {
       if (source) throw new Error(`Nested source symlinks are not supported: ${relative}`);
       hash.update(JSON.stringify(['link', relative, await readlink(current)]));
     } else if (s.isDirectory()) {
-      hash.update(JSON.stringify(['dir', relative, s.mode & 0o777]));
+      hash.update(JSON.stringify(modes ? ['dir', relative, s.mode & 0o777] : ['dir', relative]));
       for (const name of (await readdir(current)).sort())
         await walk(path.join(current, name), path.join(relative, name), depth + 1);
     } else if (s.isFile()) {
-      hash.update(JSON.stringify(['file', relative, s.mode & 0o777, s.size]));
+      hash.update(
+        JSON.stringify(
+          modes ? ['file', relative, s.mode & 0o777, s.size] : ['file', relative, s.size],
+        ),
+      );
       hash.update(await readFile(current));
     } else throw new Error(`Unsupported special file: ${relative}`);
   }

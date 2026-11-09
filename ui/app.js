@@ -28,7 +28,11 @@
     add: ['添加', 'Add'],
     sourcePath: ['Skill 库根目录', 'Skill source root'],
     projectPath: ['Git 项目根目录', 'Git repository root'],
-    manifestPath: ['清单路径（可选）', 'Manifest path (optional)'],
+    manifestPath: ['清单路径', 'Manifest path'],
+    manifestPathHint: [
+      '清单路径，默认 skills.manifest.yaml',
+      'Manifest path, default skills.manifest.yaml',
+    ],
     library: ['读取 Magpie Library', 'Read Magpie Library'],
     sync: ['同步全部项目', 'Sync all projects'],
     skills: ['技能', 'Skills'],
@@ -64,6 +68,9 @@
     conflicts: ['存在冲突', 'Conflicts found'],
     keep: ['保留部署文件后取消托管', 'Unregister and keep deployed files'],
     reload: ['刷新', 'Refresh'],
+    adopt: ['接管', 'Adopt'],
+    recorded: ['记录', 'Recorded'],
+    current: ['当前', 'Current'],
   };
   const t = (k) => words[k]?.[lang === 'zh' ? 0 : 1] || k,
     leaf = (p) => p.split(/[\\/]/).filter(Boolean).at(-1) || p;
@@ -200,14 +207,39 @@
     if (dir === state.library.dir) return 'Magpie Library';
     return leaf(dir) === 'skills' ? leaf(dir.replace(/[\\/]skills\/?$/, '')) : leaf(dir);
   }
-  function issue(error, relative = '') {
-    const parentLink = error.includes('Deployment parent is a symlink');
+  function issue(error, relative = '', conflict = null) {
+    const text = typeof error === 'string' ? error : String(error?.message ?? error ?? '');
+    const parentLink = text.includes('Deployment parent is a symlink');
+    const titles = {
+      'link-target': ['链接指向已被修改', 'Link target changed'],
+      'link-replaced': ['部署位置已不是软链接', 'Deployed path is no longer a link'],
+      'copy-content': ['部署内容被本地修改', 'Deployed copy was edited'],
+      'copy-modes': ['部署文件权限被修改', 'Deployed copy permissions changed'],
+      'copy-replaced': ['部署位置已不是复制目录', 'Deployed path is no longer a copied folder'],
+      copy: ['部署内容与记录不一致', 'Deployed content differs from the record'],
+      unmanaged: ['已有内容不属于本插件', 'Existing target is not owned'],
+    };
     const title = parentLink
       ? lang === 'zh'
         ? '技能目录是整目录软链，迁移后才能同步。'
         : 'Migrate the linked skills folder before syncing.'
-      : error;
-    return `<details class="issue"><summary>${esc(title)}</summary><code>${esc(relative ? relative + ': ' : '')}${esc(error)}</code></details>`;
+      : titles[conflict?.kind]?.[lang === 'zh' ? 0 : 1] || text;
+    const lines = [];
+    if (conflict?.kind === 'copy-modes')
+      lines.push(
+        `<code>${esc(lang === 'zh' ? '内容一致，只有文件权限位不同。' : 'Content is identical; only permission bits differ.')}</code>`,
+      );
+    else {
+      if (conflict?.expected)
+        lines.push(`<code>${t('recorded')}: ${esc(conflict.expected)}</code>`);
+      if (conflict?.kind === 'link-replaced')
+        lines.push(
+          `<code>${t('current')}: ${esc(lang === 'zh' ? '不是软链接' : 'not a link')}</code>`,
+        );
+      else if (conflict?.actual)
+        lines.push(`<code>${t('current')}: ${esc(conflict.actual)}</code>`);
+    }
+    return `<details class="issue"><summary>${esc(title)}</summary><code>${esc(relative ? relative + ': ' : '')}${esc(text)}</code>${lines.join('')}</details>`;
   }
   function projectStatus() {
     return dirty
@@ -217,7 +249,7 @@
         : plan
           ? !plan.ok
             ? t('conflicts')
-            : plan.operations.every((o) => o.action === 'unchanged')
+            : plan.operations.every((o) => o.action === 'unchanged' && !o.adopted)
               ? t('consistent')
               : t('pending')
           : t('saved');
@@ -285,9 +317,9 @@
           </div></details>
         </div>
       </header>
-      ${projectForm ? `<form id="project-add" class="add-form"><input name="dir" aria-label="${t('projectPath')}" placeholder="${t('projectPath')}" required><input name="manifestPath" aria-label="${t('manifestPath')}" placeholder="${t('manifestPath')}"><button type="button" data-action="submit-form">${t('add')}</button>${iconButton('project-form', t('cancel'), 'plus')}</form>` : ''}
+      ${projectForm ? `<form id="project-add" class="add-form"><input name="dir" aria-label="${t('projectPath')}" placeholder="${t('projectPath')}" required><input name="manifestPath" aria-label="${t('manifestPath')}" placeholder="${t('manifestPathHint')}"><button type="button" data-action="submit-form">${t('add')}</button>${iconButton('project-form', t('cancel'), 'plus')}</form>` : ''}
       ${sourceForm ? `<form id="source-add" class="add-form"><input name="dir" aria-label="${t('sourcePath')}" placeholder="${t('sourcePath')}" required><button type="button" data-action="submit-form">${t('add')}</button>${iconButton('source-form', t('cancel'), 'plus')}</form>` : ''}
-      ${(detail?.conflicts || []).map((c) => issue(c)).join('')}${detail?.parseError ? issue(detail.parseError) : ''}
+      ${(detail?.conflicts || []).map((c) => issue(c.error ?? c, '', c.conflict)).join('')}${detail?.parseError ? issue(detail.parseError) : ''}
       ${
         project
           ? `<div class="project-settings"><div class="lib-agents" role="group" aria-label="${t('defaults')}">${chips(primaryAgents, defaults, 'default-agent')}<button class="more-agents-button" data-action="more-agents" aria-expanded="${moreAgentsOpen}" aria-controls="extra-agents"><span>${t(moreAgentsOpen ? 'fewerAgents' : 'moreAgents')}</span>${glyph('chevron')}</button></div><div class="seg" role="group" aria-label="${t('method')}">${['link', 'copy'].map((m) => `<button data-action="method" data-value="${m}" aria-pressed="${m === method}">${t(m)}</button>`).join('')}</div></div><div id="extra-agents" class="extra-agents ${moreAgentsOpen ? 'expanded' : ''}" ${moreAgentsOpen ? '' : 'inert'}><div><div class="lib-agents" role="group" aria-label="${t('moreAgents')}">${chips(
@@ -442,7 +474,7 @@
     const extraProblems = plan.problems.filter(
       (p) => !plan.operations.some((o) => o.relative === p.relative && o.action === 'conflict'),
     );
-    return `${extraProblems.map((p) => issue(p.error, p.relative)).join('')}<div class="plan">${plan.operations.map((o) => `<div class="plan-row ${o.action}"><span class="operation">${labels[o.action]?.[lang === 'zh' ? 0 : 1]}</span><div><code>${esc(o.relative)}</code>${o.error ? issue(o.error) : ''}</div></div>`).join('') || `<p class="empty">${t('consistent')}</p>`}</div>`;
+    return `${extraProblems.map((p) => issue(p.error, p.relative, p.conflict)).join('')}<div class="plan">${plan.operations.map((o) => `<div class="plan-row ${o.action}"><span class="operation">${o.adopted ? t('adopt') : labels[o.action]?.[lang === 'zh' ? 0 : 1]}</span><div><code>${esc(o.relative)}</code>${o.error ? issue(o.error, '', o.conflict) : ''}</div></div>`).join('') || `<p class="empty">${t('consistent')}</p>`}</div>`;
   }
   async function previewSkill(anchor) {
     await window.openSkillReader({

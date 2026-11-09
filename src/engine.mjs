@@ -186,18 +186,15 @@ export class Engine {
     return target;
   }
   async registerProject(dir, manifestPath) {
-    const root = await projectRoot(dir),
-      file = await this.manifestLocation(root, manifestPath);
+    const root = await projectRoot(dir);
     return this.store.lock(async (state) => {
       await this.recover(state);
-      let p = state.projects.find((p) => p.dir === root);
-      if (p) p.manifestPath = file;
-      else {
-        p = { dir: root, manifestPath: file };
-        state.projects.push(p);
-      }
+      const existing = state.projects.find((p) => p.dir === root),
+        file = await this.manifestLocation(root, manifestPath || existing?.manifestPath);
+      if (existing) existing.manifestPath = file;
+      else state.projects.push({ dir: root, manifestPath: file });
       await this.store.save(state);
-      return p;
+      return state.projects.find((p) => p.dir === root);
     });
   }
   async readManifest(dir) {
@@ -331,6 +328,15 @@ export class Engine {
     state.inventories[root] ??= {};
     for (const op of plan.operations) {
       if (op.action === 'unchanged') {
+        if (op.adopted) {
+          const target = path.join(root, op.relative),
+            current = await fingerprint(target);
+          if (current !== op.current)
+            throw new Error(`Target changed after preview: ${op.relative}`);
+          const entry = { source: op.source, method: op.method, fingerprint: current };
+          if (op.method === 'copy') entry.content = await fingerprint(target, { modes: false });
+          state.inventories[root][op.relative] = entry;
+        }
         completed.push(op);
         continue;
       }
@@ -363,6 +369,7 @@ export class Engine {
           await rm(staging, { recursive: true, force: true });
           throw new Error('Source changed during copy; retry');
         }
+        if (op.method === 'copy') after.content = await fingerprint(staging, { modes: false });
       }
       if ((await fingerprint(target)) !== expected) {
         if (after) await rm(staging, { recursive: true, force: true });
@@ -400,7 +407,7 @@ export class Engine {
     state.lastSync[root] = {
       time: new Date().toISOString(),
       ok: true,
-      changed: completed.filter((o) => o.action !== 'unchanged').length,
+      changed: completed.filter((o) => o.action !== 'unchanged' || o.adopted).length,
     };
     await this.store.save(state);
     return { ...plan, completed: completed.length };

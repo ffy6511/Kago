@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile, writeFile, lstat, readlink, rm, symlink } from 'node:fs/promises';
+import { readFile, writeFile, lstat, readlink, rm, symlink, cp, chmod } from 'node:fs/promises';
 import { fixture } from '../support/fixtures.mjs';
 import { Engine } from '../src/engine.mjs';
+import { fingerprint } from '../src/skills.mjs';
 const setup = async (t) => {
   const f = await fixture(t);
   const e = new Engine({ configDir: path.join(f.base, 'config') });
@@ -114,4 +115,60 @@ test('a missing project can be unregistered without touching its files', async (
   await rm(f.dir, { recursive: true });
   assert((await f.e.removeProject(f.dir, { keep: true })).kept);
   assert.equal((await f.e.status()).projects.length, 0);
+});
+
+test('an exact replacement is adopted instead of conflicting', async (t) => {
+  const f = await setup(t);
+  assert((await f.e.apply(f.dir)).ok);
+  const shifted = path.join(f.base, 'skills-next');
+  await cp(f.ssot, shifted, { recursive: true });
+  await writeFile(f.manifestPath, f.text.replace('ssot: ../skills', 'ssot: ../skills-next'));
+  const target = path.join(f.dir, '.agents/skills/sample-skill');
+  await rm(target);
+  await symlink('../../../skills-next/dev/sample-skill', target);
+  const plan = await f.e.plan(f.dir);
+  assert(plan.ok);
+  assert.equal(plan.operations[0].action, 'unchanged');
+  assert.equal(plan.operations[0].adopted, true);
+  assert((await f.e.apply(f.dir)).ok);
+  const state = await f.e.status();
+  assert.equal(
+    state.inventories[f.dir]['.agents/skills/sample-skill'].fingerprint,
+    await fingerprint(target),
+  );
+  const clean = await f.e.plan(f.dir);
+  assert(clean.operations.every((o) => o.action === 'unchanged' && !o.adopted));
+});
+test('a changed link reports both recorded and current targets', async (t) => {
+  const f = await setup(t);
+  await f.e.apply(f.dir);
+  const target = path.join(f.dir, '.agents/skills/sample-skill');
+  await rm(target);
+  await symlink(f.ssot, target);
+  const plan = await f.e.plan(f.dir);
+  assert(!plan.ok);
+  assert.match(plan.problems[0].error, /points to/);
+  assert.equal(plan.problems[0].conflict.kind, 'link-target');
+  assert.match(plan.problems[0].conflict.expected, /skills\/dev\/sample-skill$/);
+  assert.equal(plan.problems[0].conflict.actual, f.ssot);
+});
+test('copy permission drift is reported apart from content edits', async (t) => {
+  const f = await setup(t);
+  await writeFile(f.manifestPath, f.text + 'deploy: {method: copy}\n');
+  assert((await f.e.apply(f.dir)).ok);
+  const target = path.join(f.dir, '.agents/skills/sample-skill/SKILL.md');
+  await chmod(target, 0o600);
+  let plan = await f.e.plan(f.dir);
+  assert(!plan.ok);
+  assert.equal(plan.problems[0].conflict.kind, 'copy-modes');
+  await writeFile(target, 'User edit');
+  plan = await f.e.plan(f.dir);
+  assert.equal(plan.problems[0].conflict.kind, 'copy-content');
+});
+test('re-registering without a manifest path keeps the current one', async (t) => {
+  const f = await setup(t);
+  await f.e.registerProject(f.dir, 'docs.yaml');
+  assert.equal((await f.e.status()).projects[0].manifestPath, path.join(f.dir, 'docs.yaml'));
+  await f.e.registerProject(f.dir);
+  assert.equal((await f.e.status()).projects[0].manifestPath, path.join(f.dir, 'docs.yaml'));
 });
