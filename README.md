@@ -46,7 +46,7 @@ Cursor, Codex, OpenCode and Gemini CLI share `.agents/skills`; Claude Code uses 
 - Dry run never writes project files. Apply rechecks all destinations and refuses unmanaged collisions before placing anything.
 - Ownership fingerprints protect locally edited copies and replaced symlinks. A target that exactly matches the intended output is adopted and re-recorded, so an equivalent manual replacement does not stay blocked. Removed entries clean only unchanged outputs recorded by this plugin.
 - Apply journals each replacement, so an interrupted operation can reconcile ownership before continuing. Cross-process locking serializes CLI and page writes. Filesystem writes assume cooperative local processes; actively hostile concurrent filesystem changes are outside this tool's guarantees.
-- A symlinked `.agents/skills` parent blocks Apply. Back up and migrate the whole-directory link manually; the plugin never does that automatically.
+- A symlinked `.agents/skills` parent blocks Apply. The page can repair that skills folder after an explicit confirmation that names the link and its target: it removes only the link and creates a real folder; the target is untouched. Higher-level parent links stay manual.
 - Relative symlinks can still point outside the workspace. Choose **copy** for restricted agents or repositories that need self-contained skill files. V1 refuses nested symlinks inside individual source skills.
 - Existing Magpie Library skills can be sources, including its top-level folder links. The plugin reads Library metadata and manages project outputs in its own inventory; it does not edit `library.json` or global agent switches. Existing outputs from Magpie Projects are unmanaged collisions, not automatically adopted.
 

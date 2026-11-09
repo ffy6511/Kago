@@ -166,6 +166,11 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
           return send(200, { ok: true });
         }
         await registered();
+        if (pathname === '/api/project/repair')
+          return send(
+            200,
+            await engine.repairParent(data.dir, required(data.path, 'deployment skills folder')),
+          );
         if (pathname === '/api/project/remove')
           return send(200, await engine.removeProject(data.dir, { keep: data.keep !== false }));
         if (pathname === '/api/deployments')
@@ -186,7 +191,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
             try {
               await checkParents(data.dir, relative);
             } catch (e) {
-              conflicts.push(e.message);
+              conflicts.push({ error: e.message, conflict: e.conflict });
             }
           return send(200, {
             ...manifest,

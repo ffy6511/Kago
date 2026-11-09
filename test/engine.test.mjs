@@ -1,7 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { readFile, writeFile, lstat, readlink, rm, symlink, cp, chmod } from 'node:fs/promises';
+import {
+  readFile,
+  writeFile,
+  lstat,
+  readlink,
+  rm,
+  symlink,
+  cp,
+  chmod,
+  mkdir,
+} from 'node:fs/promises';
 import { fixture } from '../support/fixtures.mjs';
 import { Engine } from '../src/engine.mjs';
 import { fingerprint } from '../src/skills.mjs';
@@ -171,4 +181,44 @@ test('re-registering without a manifest path keeps the current one', async (t) =
   assert.equal((await f.e.status()).projects[0].manifestPath, path.join(f.dir, 'docs.yaml'));
   await f.e.registerProject(f.dir);
   assert.equal((await f.e.status()).projects[0].manifestPath, path.join(f.dir, 'docs.yaml'));
+});
+
+test('repairing a linked skills folder preserves its target', async (t) => {
+  const f = await setup(t);
+  await mkdir(path.join(f.dir, '.agents'), { recursive: true });
+  await symlink(f.ssot, path.join(f.dir, '.agents/skills'));
+  const plan = await f.e.plan(f.dir);
+  assert(!plan.ok);
+  const detail = plan.problems[0].conflict;
+  assert.equal(detail.kind, 'parent-symlink');
+  assert.equal(detail.relative, '.agents/skills');
+  assert.equal(detail.fixable, true);
+  assert.equal(detail.resolved, f.ssot);
+  const fixed = await f.e.repairParent(f.dir, '.agents/skills');
+  assert.equal(fixed.ok, true);
+  const info = await lstat(path.join(f.dir, '.agents/skills'));
+  assert(info.isDirectory());
+  assert.equal(info.isSymbolicLink(), false);
+  assert.match(await readFile(path.join(f.ssot, 'dev/sample-skill/SKILL.md'), 'utf8'), /Body/);
+  const after = await f.e.plan(f.dir);
+  assert(after.ok);
+  assert(after.operations.every((o) => o.action === 'create'));
+});
+test('repair only accepts real links inside per-agent skills folders', async (t) => {
+  const f = await setup(t);
+  await mkdir(path.join(f.dir, '.agents'), { recursive: true });
+  await symlink(f.ssot, path.join(f.dir, '.agents/skills'));
+  await assert.rejects(f.e.repairParent(f.dir, '.agents'), /deployment skills folder/);
+  await assert.rejects(f.e.repairParent(f.dir, '../../outside'), /deployment skills folder/);
+  assert((await f.e.repairParent(f.dir, '.agents/skills')).ok);
+  await assert.rejects(f.e.repairParent(f.dir, '.agents/skills'), /no longer a symlink/);
+});
+test('a linked higher parent is reported without offering a repair', async (t) => {
+  const f = await setup(t);
+  await symlink(f.ssot, path.join(f.dir, '.agents'));
+  const plan = await f.e.plan(f.dir);
+  const detail = plan.problems[0].conflict;
+  assert.equal(detail.kind, 'parent-symlink');
+  assert.equal(detail.relative, '.agents');
+  assert.equal(detail.fixable, false);
 });

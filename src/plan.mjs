@@ -20,16 +20,33 @@ export function validTarget(relative) {
     )
   );
 }
+const skillFolders = new Set(Object.values(AGENTS));
 export async function checkParents(root, relative) {
   if (!validTarget(relative)) throw new Error(`Unsafe managed target: ${relative}`);
   let current = root;
   for (const part of relative.split('/').slice(0, -1)) {
     current = path.join(current, part);
     const info = await exists(current);
-    if (info && (!info.isDirectory() || info.isSymbolicLink()))
-      throw new Error(
+    if (info && (!info.isDirectory() || info.isSymbolicLink())) {
+      const parent = path.relative(root, current).split(path.sep).join('/');
+      let resolved = null;
+      if (info.isSymbolicLink())
+        try {
+          resolved = await realpath(current);
+        } catch {
+          /* Dangling link */
+        }
+      throw conflict(
         `Deployment parent is a symlink or not a directory: ${current}. Back up and migrate it manually to per-skill folders first.`,
+        {
+          kind: info.isSymbolicLink() ? 'parent-symlink' : 'parent-not-directory',
+          relative: parent,
+          ...(info.isSymbolicLink() ? { target: await readlink(current) } : {}),
+          ...(resolved ? { resolved } : {}),
+          fixable: info.isSymbolicLink() && skillFolders.has(parent),
+        },
       );
+    }
   }
 }
 const short = (value) => String(value ?? '').slice(0, 12) + '…';

@@ -65,7 +65,7 @@ For Library sources, the UI may use Magpie's Library `skills` directory as the m
 - Commit `skills.manifest.yaml` to the project. Machine-local source/project registration and deployment ownership live in the plugin's config directory; CLI supports an explicit config directory for isolated testing.
 - Generated project outputs are per-skill directories; add a clearly delimited plugin-specific ignore block only for managed deployment paths. Do not edit or impersonate Magpie's existing ignore block.
 - Inventory records targets, sources, method, fingerprints and a content-only hash for copies, sufficient to refuse deletion or replacement after local edits and to tell permission drift apart from content edits. When a target already equals this Apply's output exactly, re-record ownership instead of reporting a conflict.
-- Block before writing if any deployment parent (especially `.agents/skills`) is a symlink. Explain the conflict and migration steps; never remove the whole-directory symlink automatically.
+- Block before writing if any deployment parent (especially `.agents/skills`) is a symlink. Explain the conflict and migration steps. The page may repair a per-agent skills folder only after a dialog names the link and its target: repair removes that link (never the target) and creates a real folder. Higher-level parent links stay manual.
 - Refuse traversals, invalid skill names, destructive overlaps, source/target cycles, unsafe target parents and unmanaged existing outputs. Treat dangling links as collisions unless owned.
 - Apply is serialized and uses staged replacements and durable ownership updates. Report partial failures honestly; retain ownership of any surviving outputs so recovery does not silently orphan them.
 
@@ -93,7 +93,7 @@ Each phase ends with relevant checks and an immediate English Conventional Commi
 - Real SSOT scanning shows `blog`, `dev`, `obsidian`, `writing` and their skills, reporting invalid entries explicitly.
 - A temporary Git project using an ob-notes fixture deploys only selected skills to verified agent paths in link/copy mode.
 - Repeat Apply is idempotent; removing entries cleans only owned, unmodified targets. Modified copies and replaced links are conflicts unless the target exactly equals the intended output, in which case ownership is re-recorded.
-- Dry run and conflict checks do not mutate project files. The existing ob-notes whole-directory symlink is detected and preserved.
+- Dry run and conflict checks do not mutate project files. The existing ob-notes whole-directory symlink is detected and preserved unless the user confirms the page's repair action.
 - keep=true unregister preserves outputs. CLI and UI share the same engine and manifest.
 - Local service rejects missing tokens, untrusted Host headers, invalid paths and malformed requests.
 - Final report states repository URL, phase commits, checks, installed plugin location and any actual limitations.

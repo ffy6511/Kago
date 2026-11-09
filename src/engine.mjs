@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { mkdir, readFile, realpath, rename, rm, symlink, cp } from 'node:fs/promises';
+import { mkdir, readFile, readlink, realpath, rename, rm, symlink, cp } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { stringify } from 'yaml';
 import { Store, atomicWrite, magpieConfig } from './store.mjs';
@@ -195,6 +195,33 @@ export class Engine {
       else state.projects.push({ dir: root, manifestPath: file });
       await this.store.save(state);
       return state.projects.find((p) => p.dir === root);
+    });
+  }
+  async repairParent(dir, relative) {
+    const parent = String(relative ?? '')
+      .replace(/\\/g, '/')
+      .replace(/\/+$/, '');
+    if (!Object.values(AGENTS).includes(parent))
+      throw new Error('Choose a deployment skills folder to repair');
+    return this.store.lock(async (state) => {
+      await this.recover(state);
+      const root = await projectRoot(dir);
+      let current = root;
+      for (const part of parent.split('/').slice(0, -1)) {
+        current = path.join(current, part);
+        const info = await exists(current);
+        if (!info || info.isSymbolicLink() || !info.isDirectory())
+          throw new Error(`Deployment parent is not a plain directory: ${current}`);
+      }
+      const target = path.join(root, parent),
+        info = await exists(target);
+      if (!info) throw new Error('Deployment parent no longer exists; reload the project');
+      if (!info.isSymbolicLink())
+        throw new Error('Deployment parent is no longer a symlink; reload the project');
+      const replaced = await readlink(target);
+      await rm(target);
+      await mkdir(target, { recursive: true });
+      return { ok: true, path: target, replaced };
     });
   }
   async readManifest(dir) {

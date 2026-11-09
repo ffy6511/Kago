@@ -364,6 +364,72 @@ hr {
   color: var(--muted);
   font-size: 11px;
 }
+.issue-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.issue-title {
+  min-width: 0;
+}
+.issue-fix {
+  flex: none;
+  height: 22px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+.fix-parent {
+  grid-template-columns: minmax(0, 1fr);
+}
+.fix-parent .fix-body {
+  display: grid;
+  gap: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+.fix-parent .fix-body p,
+.fix-parent .fix-body ul {
+  margin: 0;
+}
+.fix-parent .fix-body ul {
+  display: grid;
+  gap: 4px;
+  padding-left: 18px;
+}
+.fix-parent .fix-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 0;
+}
+.fix-parent .fix-facts dt {
+  color: var(--faint);
+}
+.fix-parent .fix-facts dd {
+  min-width: 0;
+  margin: 0;
+}
+.fix-parent .fix-facts code {
+  overflow-wrap: anywhere;
+}
+.fix-parent .bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.fix-parent .bar .grow {
+  flex: 1;
+}
+.fix-parent .editor-error {
+  margin: 0;
+  color: var(--red);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .manifest-editor {
   width: 100%;
   min-height: 60vh;

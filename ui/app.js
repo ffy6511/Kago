@@ -71,6 +71,32 @@
     adopt: ['接管', 'Adopt'],
     recorded: ['记录', 'Recorded'],
     current: ['当前', 'Current'],
+    fix: ['修复', 'Fix'],
+    fixTitle: ['修复整目录软链', 'Repair linked skills folder'],
+    fixIntro: [
+      '将删除这个整目录软链接，并在原位置创建一个真实目录。',
+      'This removes the whole-folder link and creates a real folder in its place.',
+    ],
+    fixPath: ['路径', 'Path'],
+    fixTarget: ['当前指向', 'Points to'],
+    fixKeep: [
+      '链接目标里的文件不会被删除或移动。',
+      'Files in the link target are not deleted or moved.',
+    ],
+    fixGap: [
+      '修复后、同步前，这个项目暂时看不到这些技能。',
+      'Until the next sync, this project will not see these skills.',
+    ],
+    fixAfter: [
+      '保存清单并同步后，插件会为每个技能建立独立链接；没有清单时目录保持为空。',
+      'After saving a manifest and syncing, per-skill links are created. Without a manifest the folder stays empty.',
+    ],
+    fixOthers: [
+      '其他依赖这个整目录链接的仓库或工具需要自行调整。',
+      'Other repositories or tools that rely on this whole-folder link need their own migration.',
+    ],
+    fixConfirm: ['删除链接并继续', 'Remove link and continue'],
+    fixed: ['已替换为真实目录', 'Linked folder replaced'],
   };
   const t = (k) => words[k]?.[lang === 'zh' ? 0 : 1] || k,
     leaf = (p) => p.split(/[\\/]/).filter(Boolean).at(-1) || p;
@@ -216,13 +242,15 @@
       'copy-content': ['部署内容被本地修改', 'Deployed copy was edited'],
       'copy-modes': ['部署文件权限被修改', 'Deployed copy permissions changed'],
       'copy-replaced': ['部署位置已不是复制目录', 'Deployed path is no longer a copied folder'],
+      'parent-symlink': ['技能目录是整目录软链', 'Skills folder is a whole-folder link'],
+      'parent-not-directory': ['技能目录位置被占用', 'Skills folder is not a directory'],
       copy: ['部署内容与记录不一致', 'Deployed content differs from the record'],
       unmanaged: ['已有内容不属于本插件', 'Existing target is not owned'],
     };
     const title = parentLink
       ? lang === 'zh'
-        ? '技能目录是整目录软链，迁移后才能同步。'
-        : 'Migrate the linked skills folder before syncing.'
+        ? '技能目录是整目录软链'
+        : 'Skills folder is a whole-folder link'
       : titles[conflict?.kind]?.[lang === 'zh' ? 0 : 1] || text;
     const lines = [];
     if (conflict?.kind === 'copy-modes')
@@ -239,7 +267,55 @@
       else if (conflict?.actual)
         lines.push(`<code>${t('current')}: ${esc(conflict.actual)}</code>`);
     }
-    return `<details class="issue"><summary>${esc(title)}</summary><code>${esc(relative ? relative + ': ' : '')}${esc(text)}</code>${lines.join('')}</details>`;
+    const body = `<code>${esc(relative ? relative + ': ' : '')}${esc(text)}</code>${lines.join('')}`;
+    if (conflict?.fixable)
+      return `<div class="issue"><div class="issue-head"><span class="issue-title">${esc(title)}</span><button type="button" class="issue-fix" data-action="fix-parent" data-path="${esc(conflict.relative)}" data-target="${esc(conflict.resolved || conflict.target || '')}">${t('fix')}</button></div>${body}</div>`;
+    return `<details class="issue"><summary>${esc(title)}</summary>${body}</details>`;
+  }
+  function openParentFix(path, target, anchor) {
+    if (!project) return;
+    const box = document.createElement('div');
+    box.className = 'editor fix-parent';
+    box.innerHTML = `<div class="ehead"><b>${t('fixTitle')}</b></div><div class="fix-body"><p>${t('fixIntro')}</p><dl class="fix-facts"><dt>${t('fixPath')}</dt><dd><code>${esc(project.dir.replace(/[\\/]+$/, '') + '/' + path)}</code></dd>${target ? `<dt>${t('fixTarget')}</dt><dd><code>${esc(target)}</code></dd>` : ''}</dl><ul><li>${t('fixKeep')}</li><li>${t('fixGap')}</li><li>${t('fixAfter')}</li><li>${t('fixOthers')}</li></ul></div><p class="editor-error" role="alert" hidden></p><div class="bar"><span class="grow"></span><button type="button" data-close-modal>${t('cancel')}</button><button type="button" class="primary" data-fix-confirm>${t('fixConfirm')}</button></div>`;
+    const error = box.querySelector('.editor-error'),
+      confirm = box.querySelector('[data-fix-confirm]'),
+      { close } = window.workspaceUI.showModal(box, box.querySelector('.ehead b'), anchor);
+    confirm.addEventListener('click', async () => {
+      if (confirm.disabled) return;
+      confirm.disabled = true;
+      error.hidden = true;
+      try {
+        await api('project/repair', { dir: project.dir, path });
+      } catch (e) {
+        error.textContent = e.message;
+        error.hidden = false;
+        confirm.disabled = false;
+        return;
+      }
+      await close();
+      try {
+        await afterParentRepair();
+        notice(t('fixed'));
+      } catch (e) {
+        notice(e.message, true);
+      }
+    });
+  }
+  async function afterParentRepair() {
+    await refresh();
+    if (!project) return render();
+    project = state.projects.find((p) => p.dir === project.dir) || project;
+    detail = await api('project', { dir: project.dir });
+    if (text.trim()) {
+      try {
+        plan = await api('plan', { dir: project.dir, text });
+      } catch (e) {
+        plan = null;
+        detail.parseError = e.message;
+      }
+    } else plan = null;
+    await loadDeployments();
+    render();
   }
   function projectStatus() {
     return dirty
@@ -695,6 +771,10 @@
         (dir) => run(() => loadSource(dir, { reset: !!project })),
         t('source'),
       );
+      return;
+    }
+    if (b.dataset.action === 'fix-parent') {
+      openParentFix(b.dataset.path, b.dataset.target, b);
       return;
     }
     if (b.dataset.action === 'more-agents') {

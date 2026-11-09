@@ -17,4 +17,4 @@ Only outputs recorded in the plugin inventory can be updated or removed, and the
 
 `project remove --keep` (the default) preserves outputs and the ignore block and relinquishes ownership. `--clean` removes only unmodified owned outputs. Re-registering a kept project does not silently adopt its old outputs; migrate those explicitly if you want to resume management.
 
-A whole-directory `.agents/skills` symlink must be backed up and migrated manually before Apply. Nested symlinks inside source skills are refused in v1, so copy never reads an unexpected external file. Library top-level folder links are supported when the source is the configured Magpie Library root.
+A whole-directory `.agents/skills` symlink must be backed up and migrated manually before Apply; the page's repair action (unlink the skills folder, create a real folder) has no CLI command. Nested symlinks inside source skills are refused in v1, so copy never reads an unexpected external file. Library top-level folder links are supported when the source is the configured Magpie Library root.
