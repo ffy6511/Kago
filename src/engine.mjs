@@ -281,24 +281,27 @@ export class Engine {
       present = !!(await exists(file));
     return { file, text: present ? await readFile(file, 'utf8') : '', exists: present };
   }
-  async saveManifest(dir, text, { expectedText } = {}) {
+  async writeManifest(state, dir, text, { expectedText } = {}) {
     parseManifest(text);
+    const root = await projectRoot(dir),
+      project = state.projects.find((p) => p.dir === root);
+    if (!project) throw new Error('Register the project before saving its manifest');
+    const file = await this.manifestLocation(root, project.manifestPath),
+      info = await exists(file);
+    if (info && !info.isFile()) throw new Error('Manifest must be a regular file');
+    const current = info ? await readFile(file, 'utf8') : '';
+    if (expectedText === undefined && info)
+      throw new Error('Read the current manifest before replacing it');
+    if (expectedText !== undefined && current !== expectedText)
+      throw new Error('Manifest changed on disk; reload before saving');
+    await mkdir(path.dirname(file), { recursive: true });
+    await atomicWrite(file, text, info ? info.mode & 0o777 : 0o644);
+    return { ok: true, file };
+  }
+  async saveManifest(dir, text, { expectedText } = {}) {
     return this.store.lock(async (state) => {
       await this.recover(state);
-      const root = await projectRoot(dir),
-        project = state.projects.find((p) => p.dir === root);
-      if (!project) throw new Error('Register the project before saving its manifest');
-      const file = await this.manifestLocation(root, project.manifestPath),
-        info = await exists(file);
-      if (info && !info.isFile()) throw new Error('Manifest must be a regular file');
-      const current = info ? await readFile(file, 'utf8') : '';
-      if (expectedText === undefined && info)
-        throw new Error('Read the current manifest before replacing it');
-      if (expectedText !== undefined && current !== expectedText)
-        throw new Error('Manifest changed on disk; reload before saving');
-      await mkdir(path.dirname(file), { recursive: true });
-      await atomicWrite(file, text, info ? info.mode & 0o777 : 0o644);
-      return { ok: true, file };
+      return this.writeManifest(state, dir, text, { expectedText });
     });
   }
   async plan(dir, { manifestPath, text, state } = {}) {
@@ -488,12 +491,19 @@ export class Engine {
     await this.store.save(state);
     return { ...plan, completed: completed.length };
   }
-  async apply(dir, options = {}) {
+  async apply(dir, { manifestText, expectedText, ...options } = {}) {
+    if (manifestText !== undefined) parseManifest(manifestText);
     return this.store.lock(async (state) => {
       await this.recover(state);
       const root = await projectRoot(dir),
-        plan = await this.plan(root, { ...options, state });
+        plan = await this.plan(root, {
+          ...options,
+          ...(manifestText === undefined ? {} : { text: manifestText }),
+          state,
+        });
       if (!plan.ok) return plan;
+      if (manifestText !== undefined)
+        await this.writeManifest(state, dir, manifestText, { expectedText });
       try {
         return await this.execute(state, plan);
       } catch (e) {

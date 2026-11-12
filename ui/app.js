@@ -16,7 +16,7 @@
     more: ['更多', 'More'],
     moreAgents: ['更多 agent', 'More agents'],
     selectAll: ['全选', 'Select all'],
-    resetSelection: ['还原未保存的更改', 'Revert unsaved changes'],
+    cancelChanges: ['取消修改', 'Cancel changes'],
     fewerAgents: ['收起', 'Fewer agents'],
     close: ['关闭', 'Close'],
     edit: ['编辑', 'Edit'],
@@ -54,8 +54,7 @@
     chooseProject: ['选择项目', 'Choose a project'],
     noSkills: ['没有匹配的 Skill', 'No matching skills'],
     source: ['来源', 'Source'],
-    unsaved: ['未保存', 'Unsaved'],
-    saved: ['已保存', 'Saved'],
+    unsynced: ['未同步', 'Unsynced'],
     existing: ['已存在', 'Exists'],
     willRemove: ['将移除', 'Will remove'],
     workspaceSkills: ['工作区现有', 'Existing'],
@@ -87,7 +86,6 @@
       '非本插件托管的部署不会自动删除',
       'Deployments not owned by this plugin are not removed automatically',
     ],
-    noManifest: ['未保存', 'Unsaved'],
     consistent: ['已同步', 'Synced'],
     pending: ['待同步', 'Pending'],
     conflicts: ['存在冲突', 'Conflicts found'],
@@ -427,17 +425,15 @@
     });
   }
   function projectStatus() {
-    return dirty
-      ? t('unsaved')
-      : !detail?.exists
-        ? t('noManifest')
-        : plan
-          ? !plan.ok
-            ? t('conflicts')
-            : plan.operations.every((o) => o.action === 'unchanged' && !o.adopted)
-              ? t('consistent')
-              : t('pending')
-          : t('saved');
+    return dirty || !detail?.exists
+      ? t('unsynced')
+      : plan
+        ? !plan.ok
+          ? t('conflicts')
+          : plan.operations.every((o) => o.action === 'unchanged' && !o.adopted)
+            ? t('consistent')
+            : t('pending')
+        : t('consistent');
   }
   function selectionChanged() {
     return (
@@ -446,9 +442,9 @@
       (text !== selectionBaseline.text || source !== selectionBaseline.source)
     );
   }
-  function updateResetButton() {
-    const button = $('[data-action="reset-selection"]');
-    if (button) button.disabled = !selectionChanged();
+  function updateCancelButton() {
+    const button = $('[data-action="cancel-changes"]');
+    if (button) button.hidden = !selectionChanged();
   }
   function rememberSelection() {
     selectionBaseline = structuredClone({
@@ -461,9 +457,9 @@
       dirty,
       plan,
     });
-    updateResetButton();
+    updateCancelButton();
   }
-  async function resetSelection() {
+  async function cancelChanges() {
     if (!selectionChanged()) return;
     const baseline = structuredClone(selectionBaseline),
       changedSource = source !== baseline.source;
@@ -493,7 +489,7 @@
       <header class="workspace-header">
         <div class="project-picker">${glyph('folder')}<button id="project-select" class="picker project-choice" data-action="project-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('projects')}" title="${esc(project?.dir || '')}"><span>${esc(project ? leaf(project.dir) : t('chooseProject'))}</span>${glyph('chevron')}</button>${iconButton('project-form', t('addProject'), 'plus')}</div>
         <div class="actions">
-          ${project ? `<span id="project-status" class="state ${plan && !plan.ok ? 'error' : ''}">${status}</span><button data-action="save" ${!dirty && detail?.exists ? 'disabled' : ''}>${t('save')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${dirty || !detail?.exists || !plan?.ok ? 'disabled' : ''}>${t('apply')}</button>` : ''}
+          ${project ? `<span id="project-status" class="state ${plan && !plan.ok ? 'error' : ''}">${status}</span><button data-action="cancel-changes" ${selectionChanged() ? '' : 'hidden'}>${t('cancelChanges')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${!text.trim() ? 'disabled' : ''}>${t('apply')}</button>` : ''}
           <details class="menu"><summary class="icon-button" aria-label="${t('more')}" title="${t('more')}">${glyph('more')}</summary><div class="menu-items">
             <button data-action="source-form">${t('addSource')}</button><button data-action="library">${t('library')}</button>
             <button data-action="refresh">${t('reload')}</button><button data-action="sync">${t('sync')}</button>
@@ -539,7 +535,7 @@
     );
     const categories = [...new Set((scan?.skills || []).map((s) => s.category))];
     return `<div class="source-toolbar"><button id="source-select" class="picker source-choice" data-action="source-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('source')}" title="${esc(source)}"><span>${esc(sourceTitle(source))}</span>${glyph('chevron')}</button><input type="search" id="search" aria-label="${t('search')}" placeholder="${t('search')}" value="${esc(query)}"></div>
-      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<div class="selection-actions"><button type="button" class="icon-button reset-selection" data-action="reset-selection" aria-label="${t('resetSelection')}" title="${t('resetSelection')}" ${selectionChanged() ? '' : 'disabled'}>${glyph('reset')}</button><label class="category-all"><input id="category-all" type="checkbox" ${!categorySkills().length ? 'disabled' : ''}><span>${t('selectAll')}</span></label></div>` : ''}</div>
+      <div class="category-toolbar"><div class="category-tabs"><button data-action="category" data-value="" aria-selected="${!category}">${t('all')}</button>${categories.map((c) => `<button data-action="category" data-value="${esc(c)}" aria-selected="${category === c}">${esc(c)}</button>`).join('')}</div>${project ? `<div class="selection-actions"><label class="category-all"><input id="category-all" type="checkbox" ${!categorySkills().length ? 'disabled' : ''}><span>${t('selectAll')}</span></label></div>` : ''}</div>
       ${[...(scan?.problems || []), ...deployments.problems].map((p) => issue(p.error, p.path)).join('')}
       <div class="skills">${
         list
@@ -812,14 +808,13 @@
       status.textContent = projectStatus();
       status.className = 'state' + (plan && !plan.ok ? ' error' : '');
     }
-    $('[data-action="save"]').disabled = !dirty && detail?.exists;
     $('[data-action="preview"]').disabled = !text.trim();
-    $('[data-action="apply"]').disabled = dirty || !detail?.exists || !plan?.ok;
+    $('[data-action="apply"]').disabled = !text.trim();
     $('.view-tabs [data-value="skills"]').innerHTML =
       t('skills') + (entries.length ? ` <span class="count">${entries.length}</span>` : '');
     if (tab === 'manifest') $('#manifest-editor').value = text;
     if (tab === 'plan') $('.workspace-view').innerHTML = renderPlan();
-    updateResetButton();
+    updateCancelButton();
   }
   async function draft({ initial = false, agentsOnly = false, selectionOnly = false } = {}) {
     const version = ++draftVersion;
@@ -850,9 +845,7 @@
     if (
       dirty &&
       !discard &&
-      !window.confirm(
-        lang === 'zh' ? '放弃尚未保存的清单修改？' : 'Discard unsaved manifest changes?',
-      )
+      !window.confirm(lang === 'zh' ? '放弃未同步的修改？' : 'Discard unsynced changes?')
     ) {
       render();
       return;
@@ -1012,7 +1005,9 @@
       if (a === 'sync') {
         if (dirty)
           throw new Error(
-            lang === 'zh' ? '请先保存清单或放弃修改。' : 'Save or discard changes first.',
+            lang === 'zh'
+              ? '请先同步当前项目或取消修改。'
+              : 'Sync this project or cancel its changes first.',
           );
         const r = await api('sync', {});
         await refresh();
@@ -1029,8 +1024,8 @@
         return;
       }
       if (!project) return;
-      if (a === 'reset-selection') {
-        await resetSelection();
+      if (a === 'cancel-changes') {
+        await cancelChanges();
         return;
       }
       if (['default-agent', 'method', 'skill-agent', 'inherit'].includes(a)) await formFromText();
@@ -1053,30 +1048,28 @@
         else e.agents = [...defaults];
         await draft({ agentsOnly: true });
       }
-      if (a === 'save') {
-        await api('manifest/save', { dir: project.dir, text, expectedText: savedText });
-        savedText = text;
-        dirty = false;
-        await refresh();
-        await selectProject(project.dir, { discard: true, seedExisting: false });
-        notice(t('saved'));
-      }
       if (a === 'preview') {
         plan = await api('plan', { dir: project.dir, text });
         tab = 'plan';
         render();
       }
       if (a === 'apply') {
-        const r = await api('apply', { dir: project.dir });
-        plan = r.ok ? await api('plan', { dir: project.dir }) : r;
-        tab = 'plan';
+        const dir = project.dir,
+          r = await api('apply', { dir, text, expectedText: savedText });
+        if (!r.ok) {
+          plan = r;
+          tab = 'plan';
+          render();
+          notice(t('conflicts'), true);
+          return;
+        }
+        savedText = text;
+        dirty = false;
         await refresh();
-        await loadDeployments();
+        await selectProject(dir, { discard: true, seedExisting: false });
+        tab = 'plan';
         render();
-        notice(
-          r.ok ? (lang === 'zh' ? '项目技能已同步' : 'Project skills synced') : t('conflicts'),
-          !r.ok,
-        );
+        notice(lang === 'zh' ? '清单与项目技能已同步' : 'Manifest and project skills synced');
       }
       if (a === 'reveal') await api('reveal', { dir: project.dir });
       if (a === 'project-remove') {
@@ -1141,13 +1134,13 @@
       text = event.target.value;
       setDirty();
       if ($('#project-status')) {
-        $('#project-status').textContent = dirty ? t('unsaved') : t('saved');
+        $('#project-status').textContent = dirty ? t('unsynced') : t('consistent');
         $('#project-status').className = 'state';
       }
       const actions = event.target.closest('main').querySelector('.workspace-header .actions');
-      actions.querySelector('[data-action="save"]').disabled = !dirty;
-      actions.querySelector('[data-action="apply"]').disabled = true;
-      updateResetButton();
+      actions.querySelector('[data-action="preview"]').disabled = !text.trim();
+      actions.querySelector('[data-action="apply"]').disabled = !text.trim();
+      updateCancelButton();
     }
   });
   async function submitForm(form) {

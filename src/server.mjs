@@ -259,7 +259,16 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
           );
         if (pathname === '/api/plan')
           return send(200, await engine.plan(data.dir, { text: data.text }));
-        if (pathname === '/api/apply') return send(200, await engine.apply(data.dir));
+        if (pathname === '/api/apply') {
+          const options = {};
+          if (data.text !== undefined) {
+            options.manifestText = required(data.text, 'manifest text');
+            if (typeof data.expectedText !== 'string')
+              throw new Error('Missing or invalid expected manifest text');
+            options.expectedText = data.expectedText;
+          }
+          return send(200, await engine.apply(data.dir, options));
+        }
         return send(404, { error: 'Unknown API' });
       }
       if (req.method !== 'GET') return send(405, { error: 'Method not allowed' });

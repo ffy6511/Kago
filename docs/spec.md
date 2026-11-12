@@ -32,7 +32,7 @@ Before product implementation, prove the installed Magpie version can install th
 1. Register multiple source roots locally; recursively index folders containing `SKILL.md`, preserving category and leaf-folder name. Detect duplicate names and invalid frontmatter rather than choosing silently.
 2. Register Git project roots and a configurable manifest path (default `<root>/skills.manifest.yaml`). Re-registering a project without a new path keeps its current one. Allow existing Magpie Library project/source discovery where supported, without claiming shared ownership of its deployments.
 3. Read and write version-1 manifests; selecting sources and skills in the UI can create a manifest. Preview YAML and open its containing folder.
-4. Dry run computes create/update/remove/unchanged/conflict operations without writing project files or importing sources. Apply validates the full plan before mutations, maintains an ownership inventory, removes only unchanged plugin-owned outputs and refuses unmanaged collisions.
+4. Dry run computes create/update/remove/unchanged/conflict operations without writing project files or importing sources. Apply validates the full plan before mutations, maintains an ownership inventory, removes only unchanged plugin-owned outputs and refuses unmanaged collisions. The workspace page's Sync accepts the current manifest draft, validates it against the filesystem, writes the manifest atomically after planning succeeds and then executes the same plan.
 5. Deploy `link` (default, relative symlinks where possible) or `copy` per project. Relative symlinks do not make out-of-workspace sources available to restricted cloud agents; use copy for that case.
 6. Support per-skill agent overrides and project defaults. Derive agent path mappings from the verified Magpie contract, including shared-directory deduplication. At least Cursor, Codex, OpenCode, Gemini CLI and Claude Code; do not assume every agent uses `.agents/skills` if upstream differs.
 7. Detect missing/wrong/stale/locally modified deployments. Sync one project or all registered projects. A bad project must not stop reporting the other projects.
@@ -72,7 +72,7 @@ For Library sources, the UI may use Magpie's Library `skills` directory as the m
 
 ## 7. Interface
 
-A compact bilingual-capable workspace UI with a source/category browser, project sidebar and project detail. Show the project's manifest, agent selections, link/copy method, plan and sync state. Include register/remove controls, create/save manifest, Dry run, Apply, Sync all, Library source discovery and reveal-folder actions. Provide clear empty states and inline errors. All destructive cleanup follows recorded ownership, not name matching.
+A compact bilingual-capable workspace UI with a source/category browser, project sidebar and project detail. Show the project's manifest, agent selections, link/copy method, plan and sync state. Include register/remove controls, a read-only preview, Sync for persisting the current draft and deploying it, Sync all, Library source discovery and reveal-folder actions. Show **Cancel changes** only while the draft differs from its project baseline. Show existing workspace skills separately from source selections, with their link/directory type, shared reader/editor and a confirmed delete action. Provide clear empty states and inline errors. Automatic deployment cleanup follows recorded ownership; explicit workspace deletion targets the exact confirmed child path and revalidates its fingerprint.
 
 ## 8. Scope limits
 

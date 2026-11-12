@@ -79,6 +79,45 @@ test('manifest saving detects outside changes and path symlinks', async (t) => {
   await f.e.saveManifest(f.dir, f.text, { expectedText: f.text });
   await assert.rejects(f.e.registerProject(f.dir, '../external.yaml'), /inside/);
 });
+test('apply persists the current manifest draft before deploying it', async (t) => {
+  const f = await setup(t),
+    draft = f.text + 'deploy: {method: copy}\n';
+  assert((await f.e.apply(f.dir, { manifestText: draft, expectedText: f.text })).ok);
+  assert.equal(await readFile(f.manifestPath, 'utf8'), draft);
+  const target = path.join(f.dir, '.agents/skills/sample-skill');
+  assert((await lstat(target)).isDirectory());
+  assert.equal((await lstat(target)).isSymbolicLink(), false);
+});
+test('apply rejects a stale manifest baseline without writing or deploying', async (t) => {
+  const f = await setup(t),
+    draft = f.text.replace('agents: [cursor, codex, claude]', 'agents: [cursor]');
+  await assert.rejects(
+    f.e.apply(f.dir, { manifestText: draft, expectedText: 'stale manifest' }),
+    /changed on disk/,
+  );
+  assert.equal(await readFile(f.manifestPath, 'utf8'), f.text);
+  await assert.rejects(lstat(path.join(f.dir, '.agents/skills/sample-skill')), {
+    code: 'ENOENT',
+  });
+});
+test('a deployment conflict leaves the manifest draft untouched', async (t) => {
+  const f = await setup(t);
+  assert((await f.e.apply(f.dir)).ok);
+  const target = path.join(f.dir, '.agents/skills/sample-skill'),
+    draft = f.text.replace('agents: [cursor, codex, claude]', 'agents: [cursor]');
+  await rm(target);
+  await mkdir(target);
+  const result = await f.e.apply(f.dir, { manifestText: draft, expectedText: f.text });
+  assert.equal(result.ok, false);
+  assert.equal(await readFile(f.manifestPath, 'utf8'), f.text);
+});
+test('apply can create a project manifest from the current draft', async (t) => {
+  const f = await setup(t);
+  await rm(f.manifestPath);
+  assert((await f.e.apply(f.dir, { manifestText: f.text, expectedText: '' })).ok);
+  assert.equal(await readFile(f.manifestPath, 'utf8'), f.text);
+  assert((await lstat(path.join(f.dir, '.agents/skills/sample-skill'))).isSymbolicLink());
+});
 test('missing owned outputs can be recreated or forgotten', async (t) => {
   const f = await setup(t);
   await f.e.apply(f.dir);

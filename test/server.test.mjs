@@ -229,3 +229,52 @@ test('HTTP service enforces token, Host, Origin and body limits', async (t) => {
     413,
   );
 });
+test('apply accepts a manifest draft and rejects a stale baseline', async (t) => {
+  const f = await fixture(t),
+    s = await startServer({ port: 0, configDir: path.join(f.base, 'config') });
+  t.after(() => s.close());
+  const html = await (await fetch(s.url)).text(),
+    token = html.match(/name="page-token" content="([^"]+)"/)[1],
+    headers = { 'x-skill-workspaces-token': token, 'content-type': 'application/json' };
+  assert.equal(
+    (
+      await fetch(s.url + 'api/project/add', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ dir: f.dir }),
+      })
+    ).status,
+    200,
+  );
+  const draft = f.text.replace('agents: [cursor, codex, claude]', 'agents: [cursor]'),
+    apply = (text, expectedText) =>
+      fetch(s.url + 'api/apply', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ dir: f.dir, text, expectedText }),
+      });
+  assert.equal(
+    (
+      await fetch(s.url + 'api/apply', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dir: f.dir, text: draft, expectedText: f.text }),
+      })
+    ).status,
+    403,
+  );
+  const applied = await apply(draft, f.text);
+  assert.equal(applied.status, 200);
+  assert.equal((await applied.json()).ok, true);
+  assert.equal(await readFile(f.manifestPath, 'utf8'), draft);
+  const stale = f.text + 'deploy: {method: copy}\n',
+    rejected = await apply(stale, f.text);
+  assert.equal(rejected.status, 400);
+  assert.match((await rejected.json()).error, /changed on disk/);
+  assert.equal(await readFile(f.manifestPath, 'utf8'), draft);
+  await rm(f.manifestPath);
+  const created = await apply(f.text, '');
+  assert.equal(created.status, 200);
+  assert.equal((await created.json()).ok, true);
+  assert.equal(await readFile(f.manifestPath, 'utf8'), f.text);
+});
