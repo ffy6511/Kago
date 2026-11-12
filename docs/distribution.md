@@ -10,6 +10,6 @@ The checkout must remain available while installed by path. To refresh code, dis
 
 ## Later marketplace release
 
-A private GitHub repository is compatible with local development and installation. A future public distribution needs an accessible package artifact, an appropriate license (the current private source is UNLICENSED), a reviewed minimum Magpie version, and a community registry submission using `kind: page`. Publishing a package does not itself add a registry listing. No public release, registry submission or publication of this private repository is part of this task.
+A private GitHub repository is compatible with local development and installation. A public distribution needs an accessible package artifact, a reviewed minimum Magpie version, and a community registry submission using `kind: page`; the source is MIT-licensed. Publishing a package does not itself add a registry listing. No public release or registry submission is part of this task.
 
 Reference: https://github.com/magpie-community/plugins#pages

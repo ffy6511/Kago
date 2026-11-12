@@ -14,7 +14,8 @@
     "page",
     "ui",
     "docs",
-    "README.md"
+    "README.md",
+    "README-zh.md"
   ],
   "engines": {
     "node": ">=22"
@@ -53,7 +54,7 @@
   "devDependencies": {
     "prettier": "^3.9.10"
   },
-  "license": "UNLICENSED",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ffy6511/magpie-skill-workspaces.git"
