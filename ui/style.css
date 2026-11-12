@@ -124,6 +124,9 @@ hr {
   font-size: 12px;
   margin-right: 4px;
 }
+.state[hidden] {
+  display: none;
+}
 .state.error,
 .danger {
   color: var(--red);
@@ -358,7 +361,7 @@ hr {
   border-top: 1px solid var(--line);
 }
 .skill-info {
-  flex: 1;
+  flex: 0 1 auto;
   min-width: 0;
   border: 0;
   background: transparent;
@@ -369,6 +372,10 @@ hr {
   font-weight: 500;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+.skill-row-grow {
+  flex: 1;
+  min-width: 0;
 }
 .skill-info:hover {
   background: transparent;

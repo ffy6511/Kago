@@ -446,6 +446,14 @@
     const button = $('[data-action="cancel-changes"]');
     if (button) button.hidden = !selectionChanged();
   }
+  function updateProjectStatus() {
+    const status = $('#project-status');
+    if (!status) return;
+    const value = projectStatus();
+    status.textContent = value;
+    status.className = 'state' + (plan && !plan.ok ? ' error' : '');
+    status.hidden = selectionChanged() && value === t('unsynced');
+  }
   function rememberSelection() {
     selectionBaseline = structuredClone({
       project: project.dir,
@@ -458,6 +466,7 @@
       plan,
     });
     updateCancelButton();
+    updateProjectStatus();
   }
   async function cancelChanges() {
     if (!selectionChanged()) return;
@@ -484,12 +493,13 @@
   }
   function render() {
     window.workspaceUI.closeMenu();
-    const status = projectStatus();
+    const status = projectStatus(),
+      statusHidden = selectionChanged() && status === t('unsynced');
     $('#app').innerHTML = `<main class="workspace">
       <header class="workspace-header">
         <div class="project-picker">${glyph('folder')}<button id="project-select" class="picker project-choice" data-action="project-picker" aria-haspopup="menu" aria-expanded="false" aria-label="${t('projects')}" title="${esc(project?.dir || '')}"><span>${esc(project ? leaf(project.dir) : t('chooseProject'))}</span>${glyph('chevron')}</button>${iconButton('project-form', t('addProject'), 'plus')}</div>
         <div class="actions">
-          ${project ? `<span id="project-status" class="state ${plan && !plan.ok ? 'error' : ''}">${status}</span><button data-action="cancel-changes" ${selectionChanged() ? '' : 'hidden'}>${t('cancelChanges')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${!text.trim() ? 'disabled' : ''}>${t('apply')}</button>` : ''}
+          ${project ? `<span id="project-status" class="state ${plan && !plan.ok ? 'error' : ''}" ${statusHidden ? 'hidden' : ''}>${status}</span><button data-action="cancel-changes" ${selectionChanged() ? '' : 'hidden'}>${t('cancelChanges')}</button><button data-action="preview" ${!text.trim() ? 'disabled' : ''}>${t('preview')}</button><button class="primary" data-action="apply" ${!text.trim() ? 'disabled' : ''}>${t('apply')}</button>` : ''}
           <details class="menu"><summary class="icon-button" aria-label="${t('more')}" title="${t('more')}">${glyph('more')}</summary><div class="menu-items">
             <button data-action="source-form">${t('addSource')}</button><button data-action="library">${t('library')}</button>
             <button data-action="refresh">${t('reload')}</button><button data-action="sync">${t('sync')}</button>
@@ -541,7 +551,7 @@
         list
           .map((s) => {
             const e = entries.find((e) => e.name === s.name && e.path === s.path);
-            return `<div class="skill-row ${e ? 'selected' : ''}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button>${deploymentTag(s, e)}${e ? skillAgents(e) : ''}</div>`;
+            return `<div class="skill-row ${e ? 'selected' : ''}" data-skill-row="${esc(s.path)}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button><span class="skill-row-grow"></span>${deploymentTag(s, e)}${e ? skillAgents(e) : ''}</div>`;
           })
           .join('') || `<p class="empty">${t('noSkills')}</p>`
       }</div>`;
@@ -803,11 +813,7 @@
       .querySelectorAll('[data-action="method"]')
       .forEach((button) => button.setAttribute('aria-pressed', button.dataset.value === method));
     updateDeploymentTags();
-    const status = $('#project-status');
-    if (status) {
-      status.textContent = projectStatus();
-      status.className = 'state' + (plan && !plan.ok ? ' error' : '');
-    }
+    updateProjectStatus();
     $('[data-action="preview"]').disabled = !text.trim();
     $('[data-action="apply"]').disabled = !text.trim();
     $('.view-tabs [data-value="skills"]').innerHTML =
@@ -904,7 +910,27 @@
   function toggle(array, value) {
     return array.includes(value) ? array.filter((v) => v !== value) : [...array, value];
   }
+  async function setSkillSelected(skillPath, checked) {
+    if (!project) return;
+    const skill = (scan?.skills || []).find((entry) => entry.path === skillPath);
+    if (!skill) return;
+    const selected = entries.some(
+        (entry) => entry.name === skill.name && entry.path === skill.path,
+      ),
+      next = checked ?? !selected;
+    if (next === selected) return;
+    if (next) {
+      if (entries.some((entry) => entry.name === skill.name && entry.path !== skill.path))
+        throw new Error('Duplicate name; select a single source path');
+      entries.push({ name: skill.name, path: skill.path });
+    } else
+      entries = entries.filter((entry) => entry.name !== skill.name || entry.path !== skill.path);
+    await draft({ selectionOnly: true });
+  }
   $('#app').addEventListener('click', (event) => {
+    const row = event.target.closest('.skill-row[data-skill-row]');
+    if (row && !event.target.closest('.skill-agents, button, input, label, a, summary, select'))
+      return run(() => setSkillSelected(row.dataset.skillRow));
     const b = event.target.closest('button[data-action]');
     if (!b) return;
     if (b.dataset.action === 'project-picker') {
@@ -1111,15 +1137,7 @@
       });
     }
     if (event.target.dataset.skill)
-      return run(async () => {
-        const s = scan.skills.find((s) => s.path === event.target.dataset.skill);
-        if (event.target.checked) {
-          if (entries.some((e) => e.name === s.name))
-            throw new Error('Duplicate name; select a single source path');
-          entries.push({ name: s.name, path: s.path });
-        } else entries = entries.filter((e) => e.name !== s.name || e.path !== s.path);
-        await draft({ selectionOnly: true });
-      });
+      return run(() => setSkillSelected(event.target.dataset.skill, event.target.checked));
   });
   $('#app').addEventListener('input', (event) => {
     if (event.target.id === 'search') {
@@ -1133,10 +1151,7 @@
       manual = true;
       text = event.target.value;
       setDirty();
-      if ($('#project-status')) {
-        $('#project-status').textContent = dirty ? t('unsynced') : t('consistent');
-        $('#project-status').className = 'state';
-      }
+      updateProjectStatus();
       const actions = event.target.closest('main').querySelector('.workspace-header .actions');
       actions.querySelector('[data-action="preview"]').disabled = !text.trim();
       actions.querySelector('[data-action="apply"]').disabled = !text.trim();
