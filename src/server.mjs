@@ -88,7 +88,12 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
         if (req.method === 'GET' && pathname === '/api/state')
           return send(200, await engine.status());
         if (req.method !== 'POST') return send(405, { error: 'Use POST for this operation' });
-        const data = await body(req, pathname === '/api/skill/save' ? 16 * 1024 * 1024 : undefined);
+        const data = await body(
+          req,
+          ['/api/skill/save', '/api/workspace/skill/save'].includes(pathname)
+            ? 16 * 1024 * 1024
+            : undefined,
+        );
         const required = (value, label) => {
           if (typeof value !== 'string' || !value.trim() || value.includes('\0'))
             throw new Error(`Missing or invalid ${label}`);
@@ -177,6 +182,45 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
           return send(
             200,
             await engine.deployments(data.dir, required(data.source, 'source directory')),
+          );
+        if (pathname === '/api/workspace/skills')
+          return send(200, await engine.workspaceSkills(data.dir));
+        if (pathname === '/api/workspace/skill/read')
+          return send(
+            200,
+            await engine.readWorkspaceSkillDocument(
+              data.dir,
+              required(data.relative, 'workspace skill path'),
+              data.file === undefined ? 'SKILL.md' : required(data.file, 'skill file'),
+            ),
+          );
+        if (pathname === '/api/workspace/skill/save')
+          return send(
+            200,
+            await engine.saveWorkspaceSkillDocument(
+              data.dir,
+              required(data.relative, 'workspace skill path'),
+              required(data.file, 'skill file'),
+              data.text,
+              data.expectedText,
+            ),
+          );
+        if (pathname === '/api/workspace/skill/reveal') {
+          const skill = await engine.resolveWorkspaceSkill(
+            data.dir,
+            required(data.relative, 'workspace skill path'),
+          );
+          await openFolder(skill.dir);
+          return send(200, { ok: true });
+        }
+        if (pathname === '/api/workspace/skill/delete')
+          return send(
+            200,
+            await engine.removeWorkspaceSkill(
+              data.dir,
+              required(data.relative, 'workspace skill path'),
+              required(data.fingerprint, 'workspace skill fingerprint'),
+            ),
           );
         if (pathname === '/api/project') {
           const manifest = await engine.readManifest(data.dir);

@@ -5,13 +5,17 @@ window.openSkillReader = async ({
   t,
   glyph,
   source,
+  workspace = false,
+  project,
   path,
   anchor,
   onSaved,
   onDirty,
   onClosed,
 }) => {
-  let current = await api('skill/read', { source, path }),
+  const route = workspace ? 'workspace/skill/' : 'skill/',
+    location = () => (workspace ? { dir: project, relative: path } : { source, path });
+  let current = await api(route + 'read', location()),
     editor = null,
     pending = false;
   const reader = document.createElement('div');
@@ -87,9 +91,8 @@ window.openSkillReader = async ({
       show();
       return;
     }
-    current = await api('skill/save', {
-      source,
-      path,
+    current = await api(route + 'save', {
+      ...location(),
       file: current.file,
       text: editor.value,
       expectedText: current.text,
@@ -106,7 +109,7 @@ window.openSkillReader = async ({
       (file) =>
         act(async () => {
           if (file === current.file || !discard()) return;
-          const next = await api('skill/read', { source, path, file });
+          const next = await api(route + 'read', { ...location(), file });
           current = next;
           show();
         }),
@@ -122,7 +125,7 @@ window.openSkillReader = async ({
       pick.focus();
     }
     if (action === 'save') act(save);
-    if (action === 'reveal') act(() => api('skill/reveal', { source, path }));
+    if (action === 'reveal') act(() => api(route + 'reveal', location()));
   });
   show();
   window.workspaceUI.showModal(reader, reader.querySelector('.ehead b'), anchor, {

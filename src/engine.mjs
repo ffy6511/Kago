@@ -9,6 +9,11 @@ import { planProject, projectRoot, checkParents } from './plan.mjs';
 import { renderSkillDocument } from './skill-document.mjs';
 import { detectDeployments } from './deployments.mjs';
 import { skillFiles, skillFile, MAX_SKILL_TEXT } from './skill-files.mjs';
+import {
+  detectWorkspaceSkills,
+  removeWorkspaceSkill as removeWorkspaceSkillEntry,
+  resolveWorkspaceSkill as resolveWorkspaceSkillEntry,
+} from './workspace-skills.mjs';
 
 const BEGIN = '# >>> skill-workspaces: managed project skills >>>',
   END = '# <<< skill-workspaces <<<';
@@ -52,6 +57,16 @@ function ignoreContent(text, targets, previous) {
         END +
         '\n'
     : base;
+}
+function validateSkillDocumentText(text, expectedText) {
+  if (
+    typeof text !== 'string' ||
+    typeof expectedText !== 'string' ||
+    Buffer.byteLength(text) > MAX_SKILL_TEXT ||
+    Buffer.byteLength(expectedText) > MAX_SKILL_TEXT ||
+    text.includes('\0')
+  )
+    throw new Error('Expected UTF-8 text under 1 MiB');
 }
 async function ignoreInput(dir) {
   const file = path.join(dir, '.gitignore'),
@@ -101,6 +116,20 @@ export class Engine {
       state = await this.store.load();
     return detectDeployments({ dir: root, scan, inventory: state.inventories[root] || {} });
   }
+  async workspaceSkills(dir) {
+    return detectWorkspaceSkills(await projectRoot(dir));
+  }
+  async removeWorkspaceSkill(dir, relative, expectedFingerprint) {
+    return this.store.lock(async (state) => {
+      await this.recover(state);
+      const root = await projectRoot(dir);
+      return removeWorkspaceSkillEntry(root, relative, expectedFingerprint);
+    });
+  }
+  async resolveWorkspaceSkill(dir, relative) {
+    const root = await projectRoot(dir);
+    return resolveWorkspaceSkillEntry(root, relative);
+  }
   async resolveSkill(source, relative) {
     const scan = await this.scan(source);
     const skill = scan.skills.find((entry) => entry.path === relative);
@@ -123,14 +152,7 @@ export class Engine {
     };
   }
   async saveSkillDocument(source, relative, file, text, expectedText) {
-    if (
-      typeof text !== 'string' ||
-      typeof expectedText !== 'string' ||
-      Buffer.byteLength(text) > MAX_SKILL_TEXT ||
-      Buffer.byteLength(expectedText) > MAX_SKILL_TEXT ||
-      text.includes('\0')
-    )
-      throw new Error('Expected UTF-8 text under 1 MiB');
+    validateSkillDocumentText(text, expectedText);
     await this.store.lock(async () => {
       const skill = await this.resolveSkill(source, relative);
       const current = await skillFile(skill.dir, file);
@@ -140,6 +162,33 @@ export class Engine {
       await atomicWrite(current.file, text, current.info.mode & 0o777);
     });
     return this.readSkillDocument(source, relative, file);
+  }
+  async readWorkspaceSkillDocument(dir, relative, file = 'SKILL.md') {
+    const skill = await this.resolveWorkspaceSkill(dir, relative);
+    const document = await skillFile(skill.dir, file);
+    return {
+      name: skill.name,
+      file,
+      path: document.file,
+      directory: skill.dir,
+      files: await skillFiles(skill.dir),
+      text: document.text,
+      ...(/\.(md|markdown)$/i.test(file)
+        ? renderSkillDocument(document.text)
+        : { metadata: {}, html: null }),
+    };
+  }
+  async saveWorkspaceSkillDocument(dir, relative, file, text, expectedText) {
+    validateSkillDocumentText(text, expectedText);
+    await this.store.lock(async () => {
+      const skill = await this.resolveWorkspaceSkill(dir, relative);
+      const current = await skillFile(skill.dir, file);
+      if (current.text !== expectedText)
+        throw new Error('File changed outside this editor; reopen it before saving');
+      if (file === 'SKILL.md') parseSkill(text, skill.name);
+      await atomicWrite(current.file, text, current.info.mode & 0o777);
+    });
+    return this.readWorkspaceSkillDocument(dir, relative, file);
   }
   async status() {
     const state = await this.store.load();

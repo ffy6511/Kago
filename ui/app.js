@@ -58,6 +58,31 @@
     saved: ['已保存', 'Saved'],
     existing: ['已存在', 'Exists'],
     willRemove: ['将移除', 'Will remove'],
+    workspaceSkills: ['工作区现有', 'Existing'],
+    workspaceLink: ['软链', 'Link'],
+    workspaceDirectory: ['目录', 'Folder'],
+    workspaceBrokenLink: ['失效软链', 'Broken link'],
+    deleteWorkspaceSkill: ['删除工作区 Skill', 'Delete workspace skill'],
+    deleteWorkspacePath: ['路径', 'Path'],
+    deleteWorkspaceKind: ['类型', 'Type'],
+    deleteWorkspaceTarget: ['指向', 'Target'],
+    deleteWorkspaceLinkEffect: [
+      '只删除这个软链本身，链接指向的目录不会被删除。',
+      'Only this link is removed. Its target folder is left untouched.',
+    ],
+    deleteWorkspaceDirectoryEffect: [
+      '会递归删除这个真实目录以及其中的全部文件。',
+      'This folder and every file inside it will be deleted.',
+    ],
+    deleteWorkspaceManifestWarning: [
+      '当前清单仍包含这个 Skill；再次同步会重新创建它。',
+      'The current manifest still includes this skill; synchronizing again will recreate it.',
+    ],
+    deleteWorkspaceCannotUndo: ['此操作无法撤销。', 'This cannot be undone.'],
+    deleteWorkspaceLink: ['删除软链', 'Delete link'],
+    deleteWorkspaceDirectory: ['删除目录', 'Delete folder'],
+    deletedWorkspaceLink: ['已删除软链', 'Link deleted'],
+    deletedWorkspaceDirectory: ['已删除目录', 'Folder deleted'],
     externalDeployment: [
       '非本插件托管的部署不会自动删除',
       'Deployments not owned by this plugin are not removed automatically',
@@ -125,6 +150,7 @@
     source = null,
     scan = null,
     deployments = { skills: [], problems: [] },
+    workspaceSkills = { skills: [], problems: [] },
     detail = null,
     selectionBaseline = null,
     entries = [],
@@ -207,6 +233,7 @@
     folder: 'M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1Z',
     reset: 'M4 5v5h5M4.5 10a8 8 0 1 1 .8 7',
     chevron: 'm8 10 4 4 4-4',
+    trash: 'M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14M10 11v6M14 11v6',
     file: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M8 13h8 M8 17h6',
   };
   const glyph = (name) =>
@@ -314,8 +341,90 @@
         detail.parseError = e.message;
       }
     } else plan = null;
-    await loadDeployments();
+    await Promise.all([loadDeployments(), loadWorkspaceSkills()]);
     render();
+  }
+  function workspaceSkillSelected(skill) {
+    return entries.some(
+      (entry) =>
+        entry.name === skill.name &&
+        (entry.agents ?? defaults).some((agent) => skill.agents.includes(agent)),
+    );
+  }
+  async function loadWorkspaceSkills() {
+    try {
+      workspaceSkills = project
+        ? await api('workspace/skills', { dir: project.dir })
+        : { skills: [], problems: [] };
+    } catch (error) {
+      workspaceSkills = {
+        skills: [],
+        problems: [{ path: project?.dir || '', error: error.message }],
+      };
+    }
+  }
+  async function afterWorkspaceSkillDelete() {
+    await refreshWorkspaceState();
+    render();
+  }
+  async function refreshWorkspaceState({ rescanSource = false } = {}) {
+    const tasks = [loadWorkspaceSkills(), loadDeployments()];
+    if (rescanSource && source)
+      tasks.push(
+        api('scan', { dir: source })
+          .then((value) => {
+            scan = value;
+          })
+          .catch((error) => {
+            scan = { skills: [], problems: [{ path: source, error: error.message }] };
+          }),
+      );
+    await Promise.all(tasks);
+    if (detail?.exists) {
+      try {
+        plan = await api('plan', { dir: project.dir, text });
+      } catch {
+        plan = null;
+      }
+    }
+  }
+  function openWorkspaceSkillDelete(skill, anchor) {
+    if (!project) return;
+    const link = skill.kind === 'link',
+      broken = link && skill.targetExists === false,
+      absolute = project.dir.replace(/[\\/]+$/, '') + '/' + skill.relative,
+      kind = broken ? t('workspaceBrokenLink') : t(link ? 'workspaceLink' : 'workspaceDirectory'),
+      box = document.createElement('div');
+    box.className = 'editor fix-parent workspace-delete-dialog';
+    box.innerHTML = `<div class="ehead"><b>${t('deleteWorkspaceSkill')}</b></div><div class="fix-body"><dl class="fix-facts"><dt>${t('deleteWorkspacePath')}</dt><dd><code>${esc(absolute)}</code></dd><dt>${t('deleteWorkspaceKind')}</dt><dd>${kind}</dd>${link ? `<dt>${t('deleteWorkspaceTarget')}</dt><dd><code>${esc(skill.target)}</code></dd>` : ''}</dl><ul><li>${t(link ? 'deleteWorkspaceLinkEffect' : 'deleteWorkspaceDirectoryEffect')}</li>${workspaceSkillSelected(skill) ? `<li>${t('deleteWorkspaceManifestWarning')}</li>` : ''}<li>${t('deleteWorkspaceCannotUndo')}</li></ul></div><p class="editor-error" role="alert" hidden></p><div class="bar"><span class="grow"></span><button type="button" data-close-modal>${t('cancel')}</button><button type="button" class="danger" data-delete-confirm>${t(link ? 'deleteWorkspaceLink' : 'deleteWorkspaceDirectory')}</button></div>`;
+    const error = box.querySelector('.editor-error'),
+      confirm = box.querySelector('[data-delete-confirm]'),
+      { close } = window.workspaceUI.showModal(box, box.querySelector('.ehead b'), anchor);
+    confirm.addEventListener('click', async () => {
+      if (confirm.disabled) return;
+      confirm.disabled = true;
+      error.hidden = true;
+      let removed;
+      try {
+        removed = await api('workspace/skill/delete', {
+          dir: project.dir,
+          relative: skill.relative,
+          fingerprint: skill.fingerprint,
+        });
+      } catch (e) {
+        error.textContent = e.message;
+        error.hidden = false;
+        confirm.disabled = false;
+        return;
+      }
+      await close();
+      try {
+        await afterWorkspaceSkillDelete();
+        notice(t(removed.kind === 'link' ? 'deletedWorkspaceLink' : 'deletedWorkspaceDirectory'));
+      } catch (e) {
+        notice(e.message, true);
+      }
+    });
   }
   function projectStatus() {
     return dirty
@@ -403,10 +512,10 @@
               defaults,
               'default-agent',
             )}</div></div></div>
-      <nav class="view-tabs" aria-label="Workspace views">${['skills', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k)}${k === 'skills' && entries.length ? ` <span class="count">${entries.length}</span>` : ''}</button>`).join('')}</nav>`
+      <nav class="view-tabs" aria-label="Workspace views">${['skills', 'workspace', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k === 'workspace' ? 'workspaceSkills' : k)}${k === 'skills' && entries.length ? ` <span class="count">${entries.length}</span>` : k === 'workspace' && workspaceSkills.skills.length ? ` <span class="count">${workspaceSkills.skills.length}</span>` : ''}</button>`).join('')}</nav>`
           : ''
       }
-      <section class="workspace-view">${project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}</section>
+      <section class="workspace-view">${project && tab === 'workspace' ? renderWorkspaceSkills() : project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}</section>
     </main>`;
     document.documentElement.lang = lang === 'zh' ? 'zh-CN' : 'en';
     const all = $('#category-all');
@@ -441,12 +550,33 @@
           .join('') || `<p class="empty">${t('noSkills')}</p>`
       }</div>`;
   }
+  function renderWorkspaceSkills() {
+    if (!project) return '';
+    return `${workspaceSkills.problems.map((problem) => issue(problem.error, problem.path, problem.conflict)).join('')}${
+      workspaceSkills.skills.length
+        ? `<div class="skills">${workspaceSkills.skills
+            .map((skill) => {
+              const broken = skill.kind === 'link' && skill.targetExists === false,
+                kind = broken
+                  ? t('workspaceBrokenLink')
+                  : t(skill.kind === 'link' ? 'workspaceLink' : 'workspaceDirectory'),
+                agents = skill.agents.map((agent) => agentLabels[agent] || agent).join(', '),
+                title = broken
+                  ? `<span class="workspace-skill-title">${esc(skill.name)}</span>`
+                  : `<button type="button" class="skill-info workspace-skill-title" data-action="workspace-skill-preview" data-relative="${esc(skill.relative)}">${esc(skill.name)}</button>`;
+              return `<div class="skill-row workspace-skill-row"><div class="workspace-skill-info">${title}<span class="deployment-tag ${broken ? 'removing' : 'existing'}">${kind}</span><code class="workspace-skill-folder" title="${esc(agents)}">${esc(skill.folder)}</code>${skill.kind === 'link' ? `<span class="workspace-skill-target" title="${esc(skill.target)}">→ ${esc(skill.target)}</span>` : ''}</div><button type="button" class="icon-button workspace-delete" data-action="workspace-skill-delete" data-relative="${esc(skill.relative)}" aria-label="${esc(t('deleteWorkspaceSkill') + ' ' + skill.name)}" title="${esc(t('deleteWorkspaceSkill'))}">${glyph('trash')}</button></div>`;
+            })
+            .join('')}</div>`
+        : `<p class="empty">${t('noSkills')}</p>`
+    }`;
+  }
   function skillAgents(e) {
     return `<div class="skill-agents lib-agents" role="group" aria-label="${esc(e.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents ?? defaults).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(e.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(e.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>`;
   }
   function updateSkillSelection() {
     document.querySelectorAll('.skill-row').forEach((row) => {
       const input = row.querySelector('[data-skill]');
+      if (!input) return;
       const entry = entries.find((e) => e.path === input.dataset.skill);
       input.checked = !!entry;
       row.classList.toggle('selected', !!entry);
@@ -490,9 +620,9 @@
   }
   function updateDeploymentTags() {
     document.querySelectorAll('.skill-row').forEach((row) => {
-      const skill = scan.skills.find(
-        (s) => s.path === row.querySelector('[data-skill]').dataset.skill,
-      );
+      const input = row.querySelector('[data-skill]');
+      if (!input) return;
+      const skill = scan.skills.find((s) => s.path === input.dataset.skill);
       const entry = entries.find((e) => e.name === skill.name && e.path === skill.path);
       const tag = row.querySelector('.deployment-tag');
       const wanted = entry && (entry.agents ?? defaults).length > 0;
@@ -573,6 +703,34 @@
         $('#app')
           .querySelector(
             `[data-action="skill-preview"][data-path="${CSS.escape(anchor.dataset.path)}"]`,
+          )
+          ?.focus({ preventScroll: true });
+      },
+    });
+  }
+  async function previewWorkspaceSkill(anchor) {
+    const skill = workspaceSkills.skills.find(
+      (entry) => entry.relative === anchor.dataset.relative,
+    );
+    if (!skill || (skill.kind === 'link' && skill.targetExists === false)) return;
+    await window.openSkillReader({
+      api,
+      esc,
+      t,
+      glyph,
+      workspace: true,
+      project: project.dir,
+      path: skill.relative,
+      anchor,
+      onDirty: (check) => {
+        skillEditorDirty = check;
+      },
+      onSaved: () => refreshWorkspaceState({ rescanSource: true }),
+      onClosed: () => {
+        render();
+        $('#app')
+          .querySelector(
+            `[data-action="workspace-skill-preview"][data-relative="${CSS.escape(skill.relative)}"]`,
           )
           ?.focus({ preventScroll: true });
       },
@@ -732,10 +890,13 @@
         const matches = (scan?.skills || []).filter((s) => s.name === e.name);
         if (matches.length === 1) e.path = matches[0].path;
       }
-    const detectedAdded = await loadDeployments({
-      seed: seedExisting && !detail.parseError,
-      seedManaged: !detail.exists,
-    });
+    const [detectedAdded] = await Promise.all([
+      loadDeployments({
+        seed: seedExisting && !detail.parseError,
+        seedManaged: !detail.exists,
+      }),
+      loadWorkspaceSkills(),
+    ]);
     if (detail.doc) {
       try {
         plan = await api('plan', { dir });
@@ -777,6 +938,11 @@
       openParentFix(b.dataset.path, b.dataset.target, b);
       return;
     }
+    if (b.dataset.action === 'workspace-skill-delete') {
+      const skill = workspaceSkills.skills.find((entry) => entry.relative === b.dataset.relative);
+      if (skill) openWorkspaceSkillDelete(skill, b);
+      return;
+    }
     if (b.dataset.action === 'more-agents') {
       moreAgentsOpen = !moreAgentsOpen;
       b.setAttribute('aria-expanded', moreAgentsOpen);
@@ -789,6 +955,10 @@
       const a = b.dataset.action;
       if (a === 'skill-preview') {
         await previewSkill(b);
+        return;
+      }
+      if (a === 'workspace-skill-preview') {
+        await previewWorkspaceSkill(b);
         return;
       }
       if (a === 'submit-form') {
@@ -806,7 +976,7 @@
         return;
       }
       if (a === 'tab') {
-        if (b.dataset.value === 'skills' && project) await formFromText();
+        if (['skills', 'workspace'].includes(b.dataset.value) && project) await formFromText();
         tab = b.dataset.value;
         render();
         return;
@@ -915,6 +1085,7 @@
         project = null;
         selectionBaseline = null;
         deployments = { skills: [], problems: [] };
+        workspaceSkills = { skills: [], problems: [] };
         detail = null;
         entries = [];
         text = savedText = '';

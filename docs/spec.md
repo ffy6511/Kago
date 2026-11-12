@@ -68,6 +68,7 @@ For Library sources, the UI may use Magpie's Library `skills` directory as the m
 - Block before writing if any deployment parent (especially `.agents/skills`) is a symlink. Explain the conflict and migration steps. The page may repair a per-agent skills folder only after a dialog names the link and its target: repair removes that link (never the target) and creates a real folder. Higher-level parent links stay manual.
 - Refuse traversals, invalid skill names, destructive overlaps, source/target cycles, unsafe target parents and unmanaged existing outputs. Treat dangling links as collisions unless owned.
 - Apply is serialized and uses staged replacements and durable ownership updates. Report partial failures honestly; retain ownership of any surviving outputs so recovery does not silently orphan them.
+- Explicit workspace deletion is separate from automatic ownership cleanup. The page lists direct skill entries under real per-agent skills folders, identifies each as a link or real directory, and exposes a link target. A valid entry opens in the same file reader used for source skills; saving a linked entry edits its target while saving a real folder edits that folder. Deletion requires confirmation, rejects linked parents, and revalidates the exact relative path and entry fingerprint. Removing a symlink never touches its target; removing a real skill folder deletes that folder and its contents. Deleting a workspace entry does not edit the manifest.
 
 ## 7. Interface
 
@@ -95,6 +96,7 @@ Each phase ends with relevant checks and an immediate English Conventional Commi
 - Repeat Apply is idempotent; removing entries cleans only owned, unmodified targets. Modified copies and replaced links are conflicts unless the target exactly equals the intended output, in which case ownership is re-recorded.
 - Dry run and conflict checks do not mutate project files. The existing ob-notes whole-directory symlink is detected and preserved unless the user confirms the page's repair action.
 - keep=true unregister preserves outputs. CLI and UI share the same engine and manifest.
+- Existing workspace skills are listed from every real per-agent skills folder, including symlinks and real directories. Valid entries open and edit through the shared reader; a link edit changes its target, while a real-folder edit changes that folder. A confirmed delete removes only the selected link or real folder; a link target survives, a linked skills parent is refused, and a changed or unsafe entry is rejected before deletion or editing.
 - Local service rejects missing tokens, untrusted Host headers, invalid paths and malformed requests.
 - Final report states repository URL, phase commits, checks, installed plugin location and any actual limitations.
 

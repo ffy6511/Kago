@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import http from 'node:http';
+import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { fixture } from '../support/fixtures.mjs';
 import { startServer } from '../src/server.mjs';
 
@@ -114,6 +115,97 @@ test('HTTP service enforces token, Host, Origin and body limits', async (t) => {
   });
   assert.equal(deployments.status, 200);
   assert.deepEqual((await deployments.json()).skills, []);
+  const manual = path.join(f.dir, '.agents/skills/manual-skill');
+  await mkdir(manual, { recursive: true });
+  await writeFile(
+    path.join(manual, 'SKILL.md'),
+    '---\nname: manual-skill\ndescription: Existing workspace skill\n---\nBody\n',
+  );
+  assert.equal(
+    (
+      await fetch(s.url + 'api/workspace/skills', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dir: f.dir }),
+      })
+    ).status,
+    403,
+  );
+  const workspace = await (
+    await fetch(s.url + 'api/workspace/skills', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ dir: f.dir }),
+    })
+  ).json();
+  const manualSkill = workspace.skills.find(
+    (skill) => skill.relative === '.agents/skills/manual-skill',
+  );
+  assert.equal(manualSkill.kind, 'directory');
+  assert.equal(
+    (
+      await fetch(s.url + 'api/workspace/skill/read', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ dir: f.dir, relative: manualSkill.relative }),
+      })
+    ).status,
+    403,
+  );
+  const manualDocument = await (
+    await fetch(s.url + 'api/workspace/skill/read', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ dir: f.dir, relative: manualSkill.relative }),
+    })
+  ).json();
+  assert.equal(manualDocument.name, 'manual-skill');
+  assert.match(manualDocument.html, /<p>Body/);
+  const savedWorkspaceSkill = await fetch(s.url + 'api/workspace/skill/save', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      dir: f.dir,
+      relative: manualSkill.relative,
+      file: 'SKILL.md',
+      text: manualDocument.text + 'Updated through workspace API\n',
+      expectedText: manualDocument.text,
+    }),
+  });
+  assert.equal(savedWorkspaceSkill.status, 200);
+  assert.match((await savedWorkspaceSkill.json()).text, /Updated through workspace API/);
+  assert.equal(
+    (
+      await fetch(s.url + 'api/workspace/skill/read', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ dir: f.dir, relative: '.agents/skills/../escaped' }),
+      })
+    ).status,
+    400,
+  );
+  const updatedWorkspace = await (
+    await fetch(s.url + 'api/workspace/skills', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ dir: f.dir }),
+    })
+  ).json();
+  const updatedManualSkill = updatedWorkspace.skills.find(
+    (skill) => skill.relative === '.agents/skills/manual-skill',
+  );
+  const deleted = await fetch(s.url + 'api/workspace/skill/delete', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      dir: f.dir,
+      relative: updatedManualSkill.relative,
+      fingerprint: updatedManualSkill.fingerprint,
+    }),
+  });
+  assert.equal(deleted.status, 200);
+  assert.equal((await deleted.json()).kind, 'directory');
+  await assert.rejects(lstat(manual), { code: 'ENOENT' });
   const plan = await (
     await fetch(s.url + 'api/plan', {
       method: 'POST',

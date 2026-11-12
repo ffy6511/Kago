@@ -305,6 +305,45 @@ hr {
   border-radius: 10px;
   background: var(--card);
 }
+.skill-row.workspace-skill-row {
+  align-items: center;
+}
+.workspace-skill-info {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.workspace-skill-title {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.workspace-skill-info .skill-info {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.workspace-skill-folder {
+  color: var(--muted);
+  font-size: 11px;
+}
+.workspace-skill-target {
+  min-width: 0;
+  max-width: 100%;
+  color: var(--muted);
+  font: 11px var(--code);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace-delete {
+  margin-left: auto;
+}
+.workspace-delete:hover {
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+}
 .skill-row {
   display: flex;
   align-items: flex-start;
