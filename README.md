@@ -245,6 +245,8 @@ bun run check
 bun run format:check
 ```
 
+Pushes and pull requests run these checks on Ubuntu and macOS with Node 22 and 24. To release, update the package version and add bilingual notes under `docs/releases/`, merge to `main`, then push a matching `vMAJOR.MINOR.PATCH` tag. The release workflow publishes npm and creates the GitHub Release. See [release setup](docs/distribution.md#automated-releases) for the one-time npm authorization.
+
 <a name="docs"></a>
 
 ## Docs

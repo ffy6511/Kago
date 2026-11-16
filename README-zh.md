@@ -245,6 +245,8 @@ bun run check
 bun run format:check
 ```
 
+推送和 PR 会在 Ubuntu、macOS 上使用 Node 22、24 运行检查。发版时更新包版本，在 `docs/releases/` 添加双语说明，合并到 `main` 后推送对应的 `vMAJOR.MINOR.PATCH` 标签；工作流会发布 npm 并创建 GitHub Release。首次使用需完成 [npm 授权配置](docs/distribution.md#one-time-npm-setup)。
+
 <a name="docs"></a>
 
 ## 文档

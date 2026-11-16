@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org/
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: 1.3.14
+      - name: Verify release tag and main ancestry
+        run: |
+          git fetch origin main:refs/remotes/origin/main
+          node scripts/release.mjs verify "$RELEASE_TAG"
+      - run: bun install --frozen-lockfile
+      - run: bun run check
+      - run: bun run format:check
+      - run: bun run test
+      - name: Update npm for trusted publishing
+        run: npm install --global npm@11
+      - name: Publish the package
+        id: package
+        run: node scripts/release.mjs publish "$RELEASE_TAG"
+      - name: Create GitHub Release and attach the npm package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_ARCHIVE: ${{ steps.package.outputs.archive }}
+          RELEASE_VERSION: ${{ steps.package.outputs.version }}
+        run: |
+          if gh release view "$RELEASE_TAG" --json id > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" "$RELEASE_ARCHIVE" --clobber
+          else
+            gh release create "$RELEASE_TAG" "$RELEASE_ARCHIVE" \
+              --title "Kago $RELEASE_TAG" \
+              --notes-file "docs/releases/$RELEASE_VERSION.md" \
+              --generate-notes \
+              --verify-tag
+          fi

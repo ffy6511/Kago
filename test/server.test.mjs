@@ -31,6 +31,11 @@ test('HTTP service enforces token, Host, Origin and body limits', async (t) => {
   });
   assert.equal(hostStatus, 403);
   const headers = { 'x-skill-workspaces-token': token, 'content-type': 'application/json' };
+  const { version } = JSON.parse(
+    await readFile(new URL('../package.json', import.meta.url), 'utf8'),
+  );
+  const health = await fetch(s.url + 'api/health', { headers });
+  assert.deepEqual(await health.json(), { ok: true, version });
   assert.equal(
     (
       await fetch(s.url + 'api/state', {

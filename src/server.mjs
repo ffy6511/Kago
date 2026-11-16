@@ -7,6 +7,7 @@ import { Engine } from './engine.mjs';
 import { parseManifest } from './manifest.mjs';
 import { checkParents } from './plan.mjs';
 const root = new URL('../ui/', import.meta.url);
+const { version } = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
 async function body(req, limit = 1024 * 1024) {
   if (Number(req.headers['content-length']) > limit) {
     req.resume();
@@ -84,7 +85,7 @@ export async function startServer({ port = 3498, configDir, magpieDir } = {}) {
         if (got.length !== token.length || !timingSafeEqual(got, Buffer.from(token)))
           return send(403, { error: 'Missing or invalid page token; reload the page' });
         if (req.method === 'GET' && pathname === '/api/health')
-          return send(200, { ok: true, version: '0.1.0' });
+          return send(200, { ok: true, version });
         if (req.method === 'GET' && pathname === '/api/state')
           return send(200, await engine.status());
         if (req.method !== 'POST') return send(405, { error: 'Use POST for this operation' });
