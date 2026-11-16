@@ -1,9 +1,13 @@
 <div align="center">
 <a name="readme-top"></a>
 
-# Magpie Skill Workspaces
+<img src="page/kago-icon.png" alt="Kago basket icon" width="160" height="160">
 
-One manifest as the single source of truth — one action deploys exactly the Agent Skills each project needs.
+# Kago
+
+Agent skills, tailored to each project.
+
+Kago is a Magpie plugin that selects skills from shared sources and deploys each project's set from one Git-tracked manifest.
 
 **English** · [简体中文](README-zh.md)
 
@@ -58,7 +62,7 @@ If the macOS app's CLI is not on `PATH`:
 /Applications/magpie.app/Contents/MacOS/magpie plugin add /absolute/path/to/magpie-skill-workspaces
 ```
 
-Open **Magpie → Plugins → Skill Workspaces**, register a source and a Git project, choose skills, then **Preview → Sync** as needed. Sync validates the current draft, writes `skills.manifest.yaml` atomically and deploys it. No separate server is needed; the page is served on loopback port `3498` (configurable in the plugin options).
+Open **Magpie → Plugins → Kago**, register a source and a Git project, choose skills, then **Preview → Sync** as needed. Sync validates the current draft, writes `skills.manifest.yaml` atomically and deploys it. No separate server is needed; the page is served on loopback port `3498` (configurable in the plugin options).
 
 A source-path install uses this checkout, so reload the plugin after code changes. Remove it with `magpie plugin rm /absolute/path/to/magpie-skill-workspaces`.
 
@@ -106,7 +110,7 @@ node cli.mjs apply /path/to/repo
 node cli.mjs sync
 ```
 
-Node 22 or newer, with dependencies installed (`bun install`). `--config-dir` isolates state; `--magpie-dir` selects the Library config root.
+Node 22 or newer, with dependencies installed (`bun install`). The installed command is `kago`. `--config-dir` isolates state; `--magpie-dir` selects the Library config root.
 
 <a name="development"></a>
 

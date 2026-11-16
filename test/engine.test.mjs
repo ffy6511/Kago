@@ -156,7 +156,7 @@ test('a conflict prevents all planned placements', async (t) => {
 test('cross-process lock prevents concurrent mutation', async (t) => {
   const f = await setup(t);
   await f.e.store.lock(async () => {
-    await assert.rejects(f.e.registerProject(f.dir), /Another Skill Workspaces operation/);
+    await assert.rejects(f.e.registerProject(f.dir), /Another Kago operation/);
   });
 });
 test('a missing project can be unregistered without touching its files', async (t) => {

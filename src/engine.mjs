@@ -28,7 +28,7 @@ function ignoreContent(text, targets, previous) {
       text.indexOf(BEGIN, start + 1) >= 0 ||
       text.indexOf(END, end + 1) >= 0
     )
-      throw new Error('Malformed Skill Workspaces .gitignore block; repair it before applying');
+      throw new Error('Malformed Kago .gitignore block; repair it before applying');
     const actual = text
       .slice(start + BEGIN.length, end)
       .trim()

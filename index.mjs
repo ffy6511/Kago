@@ -20,7 +20,7 @@ export default {
   async server(input, options = {}) {
     // Starting our UI must not delay other plugins in Magpie's shared host.
     started ??= launch(options).catch((error) => {
-      console.error('[skill-workspaces]', error.message);
+      console.error('[kago]', error.message);
       started = null;
     });
     return {};

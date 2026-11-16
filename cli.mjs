@@ -2,7 +2,7 @@
 import { parseArgs } from 'node:util';
 import { Engine } from './src/engine.mjs';
 import { startServer } from './src/server.mjs';
-const help = `Skill Workspaces
+const help = `Kago
   scan <source>                     List categorized skills
   source add|remove <source>         Register a local source
   project add <repo> [--manifest file]
@@ -74,7 +74,7 @@ try {
         configDir: values['config-dir'],
         magpieDir: values['magpie-dir'],
       });
-      console.log(`Skill Workspaces: ${service.url}`);
+      console.log(`Kago: ${service.url}`);
       break;
     }
     default:

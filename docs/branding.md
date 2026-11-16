@@ -1,0 +1,11 @@
+# Kago
+
+Kago (ka-go) takes its name from 籠, Japanese for “basket”. Each project selects its own set of agent skills from shared sources. The package is `@ffy6511/kago`, the CLI is `kago`, and the plugin page title is Kago in both languages.
+
+The icon is [`page/kago-icon.png`](../page/kago-icon.png), a transparent PNG generated with the built-in imagegen tool. A charcoal and wheat-colored woven basket holds three skill cards. Both READMEs display it at 160 × 160 pixels. Magpie's sidebar uses the same image through `magpie.page.icon`; its location inside `page/` lets the host serve it with the launcher.
+
+## Generation prompt
+
+```text
+Use case: logo-brand. Create ONE final production app icon for Kago, a developer tool that selects reusable agent skills and equips each project with its own set. Kago means basket in Japanese. Asset: a clean, memorable symbol for a GitHub README and software icon, no wordmark. Subject: a compact Japanese woven basket holding three simple skill cards, arranged as a small carefully selected set. Make the basket unmistakable, with a broad low trapezoid body, softly rounded bottom corners, a generous arched handle, and a minimal bold woven lattice formed from only a few wide intersecting bands. Three rounded rectangular cards peek above the basket rim at subtly different angles, clearly separated; no lettering or symbols on cards. The basket and cards should read as ONE coherent emblem. Style: refined contemporary Japanese stationery identity, flat vector-like shapes with excellent optical balance, warm and understated, very crisp edges, bold silhouette, restrained detailing that stays legible at 48 px. Palette: near-black charcoal basket structure, warm wheat/ochre woven accents, off-white cards with one muted ochre card and one subdued blue-gray card. Balanced simple geometry with slight warmth, avoid a generic shopping bag or checkout cart appearance. Composition: one front-facing centered icon, square image, icon fills approximately 80 percent of the canvas, generous clear margin, genuinely transparent background. No text, no letters, no logo sheets, no variations, no mockups, no border frame, no rounded-square app tile, no gradients, no drop shadows, no 3D rendering, no photographic background, no watermarks. Deliver a polished standalone transparent PNG emblem.
+```

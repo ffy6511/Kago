@@ -134,10 +134,9 @@ export async function planProject({
         wantedLink = desired ? path.relative(path.dirname(target), desired.source) : null,
         currentLink = info?.isSymbolicLink() ? await readlink(target) : null;
       if (info && !owned)
-        throw conflict(
-          'Existing target is not owned by Skill Workspaces; nothing will be overwritten',
-          { kind: 'unmanaged' },
-        );
+        throw conflict('Existing target is not owned by Kago; nothing will be overwritten', {
+          kind: 'unmanaged',
+        });
       // A target that already equals this Apply's output contains nothing to preserve.
       const matchesDesired =
         !!desired &&

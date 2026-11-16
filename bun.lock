@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@ffy6511/magpie-skill-workspaces",
+      "name": "@ffy6511/kago",
       "dependencies": {
         "markdown-it": "^15.0.3",
         "yaml": "^2.9.1",

@@ -1,3 +1,12 @@
+# Verification — 2026-11-16
+
+Environment: macOS, official Magpie 0.1.4306, its Bun plugin host, and Node for the standalone test suite/CLI.
+
+- Kago is the English and Chinese plugin title, `@ffy6511/kago` is the package name, and `kago` is the installed CLI command. Both READMEs display the generated transparent basket icon at 160 × 160 pixels.
+- `bun install --frozen-lockfile`, `bun run check`, `bun run format:check` and all 44 tests pass. The CLI help displays Kago, and both README image references resolve.
+- `npm pack` includes `page/kago-icon.png`, the `magpie.page.icon` declaration, the page, host service and README files. An extracted package installed into an isolated official Magpie configuration resolves its dependencies, serves the Kago page and exposes the same PNG through the host's sidebar icon URL.
+- The daily checkout installation was refreshed and enabled. After reloading the official desktop window, the sidebar visibly shows the colored Kago basket logo and the plugin page loads with its existing 7 selected skills and 14 workspace entries. Plugin options, project registrations and deployment ownership remain unchanged; no real project manifest or skill deployment was written.
+
 # Verification — 2026-11-12
 
 Environment: macOS, official Magpie 0.1.3899, its Bun plugin host, and Node for the standalone test suite/CLI.

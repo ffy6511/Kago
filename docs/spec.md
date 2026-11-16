@@ -1,4 +1,4 @@
-# Spec: Magpie Skill Workspaces — distributable plugin
+# Spec: Kago — distributable Magpie plugin
 
 Status: MVP implemented and locally installed · Revised: 2026-11-05
 

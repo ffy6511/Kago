@@ -1,6 +1,6 @@
 # Distribution
 
-The unit is one npm-compatible package, `@ffy6511/magpie-skill-workspaces`, containing the page launcher, loopback service, sync engine and optional CLI. `package.json` declares `magpie.page`, its service and bilingual summary, alongside the ESM host `main`. It uses the established community page-with-host-part pattern.
+The unit is one npm-compatible package, `@ffy6511/kago`, containing the page launcher, loopback service, sync engine, optional `kago` CLI and README icon assets. `package.json` declares `magpie.page`, its service and bilingual summary, alongside the ESM host `main`. It uses the established community page-with-host-part pattern.
 
 ## Local package
 

@@ -1,6 +1,8 @@
 # CLI and ownership
 
-Run `node cli.mjs --help` or the installed `skill-workspaces` command. Commands return JSON; exit 0 means success, 2 means conflicts in a plan/sync, and 1 means a command error.
+Run `node cli.mjs --help` or the installed `kago` command. Commands return JSON; exit 0 means success, 2 means conflicts in a plan/sync, and 1 means a command error.
+
+Kago retains the `skill-workspaces` state directory, `SKILL_WORKSPACES_*` environment variables and managed deployment markers so existing project registrations and ownership remain available.
 
 ```sh
 node cli.mjs source add /path/to/categorized/skills

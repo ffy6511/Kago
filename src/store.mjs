@@ -86,8 +86,7 @@ export class Store {
       } catch (err) {
         if (err.code === 'ESRCH') alive = false;
       }
-      if (alive)
-        throw new Error('Another Skill Workspaces operation is running; retry when it finishes');
+      if (alive) throw new Error('Another Kago operation is running; retry when it finishes');
       const stale = lock + '-' + randomUUID();
       await rename(lock, stale);
       await rm(stale, { recursive: true });

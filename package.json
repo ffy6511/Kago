@@ -1,11 +1,11 @@
 {
-  "name": "@ffy6511/magpie-skill-workspaces",
+  "name": "@ffy6511/kago",
   "version": "0.1.0",
-  "description": "Categorized skill libraries and manifest-driven project workspaces for Magpie",
+  "description": "Kago — agent skills tailored to each project, powered by Magpie",
   "type": "module",
   "main": "./index.mjs",
   "bin": {
-    "skill-workspaces": "./cli.mjs"
+    "kago": "./cli.mjs"
   },
   "files": [
     "index.mjs",
@@ -33,11 +33,12 @@
       "zh": "从分类技能库和项目清单同步项目级技能"
     },
     "page": {
-      "title": "Skill Workspaces",
+      "title": "Kago",
       "titles": {
-        "zh": "技能工作区"
+        "zh": "Kago"
       },
       "file": "page/index.html",
+      "icon": "page/kago-icon.png",
       "service": {
         "port": 3498,
         "option": "port"

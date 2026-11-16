@@ -1,9 +1,13 @@
 <div align="center">
 <a name="readme-top"></a>
 
-# Magpie Skill Workspaces
+<img src="page/kago-icon.png" alt="Kago 篮子图标" width="160" height="160">
 
-以一份清单为唯一真源，一键把每个项目需要的 Agent Skills 精确部署到位。
+# Kago
+
+为每个项目配好 Agent Skills。
+
+Kago 是一个 Magpie 插件，从共享来源挑选技能，用一份纳入 Git 的清单部署每个项目需要的一套。
 
 [English](README.md) · **简体中文**
 
@@ -58,7 +62,7 @@ magpie plugin add /absolute/path/to/magpie-skill-workspaces
 /Applications/magpie.app/Contents/MacOS/magpie plugin add /absolute/path/to/magpie-skill-workspaces
 ```
 
-打开 **Magpie → 插件 → 技能工作区**，注册技能来源和 Git 项目，选择技能后按需执行 **预览 → 同步**。同步会校验当前草稿，原子写入 `skills.manifest.yaml` 并部署。不需要单独起服务；页面通过 loopback 端口 `3498` 提供，可在插件 Options 里修改。
+打开 **Magpie → 插件 → Kago**，注册技能来源和 Git 项目，选择技能后按需执行 **预览 → 同步**。同步会校验当前草稿，原子写入 `skills.manifest.yaml` 并部署。不需要单独起服务；页面通过 loopback 端口 `3498` 提供，可在插件 Options 里修改。
 
 以源码路径安装时使用的是当前 checkout，改完代码后重新加载插件即可。卸载使用 `magpie plugin rm /absolute/path/to/magpie-skill-workspaces`。
 
@@ -106,7 +110,7 @@ node cli.mjs apply /path/to/repo
 node cli.mjs sync
 ```
 
-需要 Node 22 或更新版本，并已安装依赖（`bun install`）。`--config-dir` 隔离状态；`--magpie-dir` 选择 Library 配置根目录。
+需要 Node 22 或更新版本，并已安装依赖（`bun install`）。安装后的命令名为 `kago`。`--config-dir` 隔离状态；`--magpie-dir` 选择 Library 配置根目录。
 
 <a name="development"></a>
 
