@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a capability or workflow change for Kago
+title: '[Feature]: '
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem before the proposed interface. Keep the request within Kago's project-level skills, manifest, deployment, CLI, local service, or Magpie page. If it depends on a Magpie host capability that Kago cannot access, mention that boundary.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow is difficult or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the expected behavior and user flow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing workarounds or other approaches.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - UI
+        - CLI
+        - Manifest and planning
+        - Deployment and ownership
+        - Local service and API
+        - Documentation
+        - Packaging and installation
+        - Magpie integration
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Include examples, related issues, or constraints.
+    validations:
+      required: false

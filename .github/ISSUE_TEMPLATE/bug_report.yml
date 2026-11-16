@@ -1,0 +1,110 @@
+name: Bug report
+description: Report a reproducible problem in Kago
+title: '[Bug]: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues before opening a new one. Include enough detail to reproduce the problem, and remove tokens, private paths, and other sensitive data from logs and screenshots.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and its impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the project setup, relevant manifest contents, and exact actions.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      options:
+        - UI
+        - CLI
+        - Manifest and planning
+        - Deployment and ownership
+        - Local service and API
+        - Documentation
+        - Packaging and installation
+    validations:
+      required: true
+
+  - type: input
+    id: kago-version
+    attributes:
+      label: Kago version or commit
+      placeholder: 0.1.0 or 410e039
+    validations:
+      required: true
+
+  - type: input
+    id: magpie-version
+    attributes:
+      label: Magpie version
+      placeholder: 0.1.4306
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS
+        - Linux
+        - Windows
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation
+      options:
+        - npm package
+        - Local checkout
+        - Packed tarball
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or related output
+      description: Paste relevant errors or attach screenshots. Remove sensitive data first.
+      render: shell
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed tokens, private paths, and other sensitive data.
+          required: true
+        - label: I can reproduce this with the latest release or the current main branch.
+          required: true

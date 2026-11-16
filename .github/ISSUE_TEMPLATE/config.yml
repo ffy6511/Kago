@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Kago documentation
+    url: https://github.com/ffy6511/Kago#readme
+    about: Installation, CLI usage, manifests, file safety, and development checks.
+  - name: Integration and distribution docs
+    url: https://github.com/ffy6511/Kago/tree/main/docs
+    about: Magpie integration, packaging, recovery, and verification details.
