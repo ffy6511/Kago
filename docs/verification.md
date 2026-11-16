@@ -32,8 +32,8 @@ Environment: macOS, official Magpie 0.1.3037, its Bun plugin host, and Node for 
 - Existing Magpie Library: 82 valid skills; no scan problems. Its settings and global agent switches were not changed.
 - Browser flow: register source/project, select `obsidian-markdown`, choose Cursor/Codex, save YAML, preview one deduplicated shared destination, Apply and verify an unchanged repeat preview. Verified official Magpie embedded page loading, English/dark mode and manual YAML-to-form editing with copy deployment.
 - Packaged host flow: `npm pack`, extract into a clean directory, install locally into an isolated official Magpie configuration, and load the host service. In that Magpie/Bun host, deploy all seven real Obsidian skills to 14 shared/Claude destinations, repeat Apply, convert links to copies and clean owned outputs.
-- The daily-use desktop app has the local checkout installed and enabled. Its page opens with the real source and ob-notes registration; no development server is needed.
-- ob-notes read-only acceptance reports the existing whole-directory `.agents/skills` symlink conflict and preserves it. No manifest or deployment files were written into ob-notes during acceptance; only the requested inbox spec was rewritten.
+- The desktop app has the plugin installed and enabled. Its page opens with the existing source and project registrations; no development server is needed.
+- Read-only acceptance on an existing project reports the whole-directory `.agents/skills` symlink conflict and preserves it. No project manifest or deployment files were written during acceptance.
 
 ## Boundaries
 

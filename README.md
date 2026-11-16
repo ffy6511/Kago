@@ -13,9 +13,9 @@ Kago is a Magpie plugin that selects skills from shared sources and deploys each
 
 <br/>
 
-<a href="https://github.com/ffy6511/magpie-skill-workspaces/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ffy6511/magpie-skill-workspaces?style=for-the-badge&logo=github&color=E3B341&labelColor=20242D"></a>
-<a href="https://github.com/ffy6511/magpie-skill-workspaces/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/ffy6511/magpie-skill-workspaces?style=for-the-badge&logo=git&color=1B54E8&labelColor=20242D"></a>
-<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/ffy6511/magpie-skill-workspaces?style=for-the-badge&logo=opensourceinitiative&logoColor=white&color=34D399&labelColor=20242D"></a>
+<a href="https://github.com/ffy6511/Kago/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/ffy6511/Kago?style=for-the-badge&logo=github&color=E3B341&labelColor=20242D"></a>
+<a href="https://github.com/ffy6511/Kago/commits/main"><img alt="Last commit" src="https://img.shields.io/github/last-commit/ffy6511/Kago?style=for-the-badge&logo=git&color=1B54E8&labelColor=20242D"></a>
+<a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/ffy6511/Kago?style=for-the-badge&logo=opensourceinitiative&logoColor=white&color=34D399&labelColor=20242D"></a>
 <a href="https://nodejs.org"><img alt="Node.js 22 or newer" src="https://img.shields.io/badge/node-%3E%3D22-5FA04E?style=for-the-badge&logo=nodedotjs&logoColor=white&labelColor=20242D"></a>
 <a href="docs/integration.md"><img alt="Tested with Magpie 0.1.3037" src="https://img.shields.io/badge/Magpie-0.1.3037-8B5CF6?style=for-the-badge&labelColor=20242D"></a>
 
@@ -26,6 +26,8 @@ Kago is a Magpie plugin that selects skills from shared sources and deploys each
 
 - [Features](#features)
 - [Install](#install)
+- [Walkthrough](#walkthrough)
+- [Update and remove skills](#manage-skills)
 - [Manifest](#manifest)
 - [File safety](#file-safety)
 - [CLI](#cli)
@@ -52,19 +54,129 @@ Kago is a Magpie plugin that selects skills from shared sources and deploys each
 
 ## Install
 
+Clone the repository and install dependencies:
+
 ```sh
-magpie plugin add /absolute/path/to/magpie-skill-workspaces
+git clone https://github.com/ffy6511/Kago.git
+cd Kago
+bun install --frozen-lockfile
+```
+
+Install the local plugin:
+
+```sh
+magpie plugin add /absolute/path/to/Kago
 ```
 
 If the macOS app's CLI is not on `PATH`:
 
 ```sh
-/Applications/magpie.app/Contents/MacOS/magpie plugin add /absolute/path/to/magpie-skill-workspaces
+/Applications/magpie.app/Contents/MacOS/magpie plugin add /absolute/path/to/Kago
 ```
 
-Open **Magpie → Plugins → Kago**, register a source and a Git project, choose skills, then **Preview → Sync** as needed. Sync validates the current draft, writes `skills.manifest.yaml` atomically and deploys it. No separate server is needed; the page is served on loopback port `3498` (configurable in the plugin options).
+Open **Magpie → Plugins → Kago**. The local service starts automatically; its default port is `3498` (configurable in the plugin options).
 
-A source-path install uses this checkout, so reload the plugin after code changes. Remove it with `magpie plugin rm /absolute/path/to/magpie-skill-workspaces`.
+A source-path install uses this checkout, so reload the plugin after code changes. Remove it with `magpie plugin rm /absolute/path/to/Kago`.
+
+<a name="walkthrough"></a>
+
+## Walkthrough
+
+This example equips a `paper-notes` Git project with two skills from a shared `team-skills` folder. Each skill is a folder containing a `SKILL.md` whose frontmatter includes a matching `name` and a nonempty `description`.
+
+<table>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/select-en.png"><img src="docs/images/select-en.png" alt="1. Select skills: Choose project defaults and per-skill agent overrides." width="550" height="350"></a><br>
+      <strong>1. Select skills</strong><br>
+      <sub>Choose project defaults and per-skill agent overrides.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/preview-en.png"><img src="docs/images/preview-en.png" alt="2. Preview the paths: Review the exact changes before Sync writes anything." width="550" height="350"></a><br>
+      <strong>2. Preview the paths</strong><br>
+      <sub>Review the exact changes before Sync writes anything.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/existing-en.png"><img src="docs/images/existing-en.png" alt="3. Inspect the deployment: Verify the actual links, agent folders and source targets." width="550" height="350"></a><br>
+      <strong>3. Inspect the deployment</strong><br>
+      <sub>Verify the actual links, agent folders and source targets.</sub>
+    </td>
+    <td width="50%" align="center" valign="top">
+      <a href="docs/images/reader-en.png"><img src="docs/images/reader-en.png" alt="4. Read and edit: Open SKILL.md; only an explicit Save writes the file." width="550" height="350"></a><br>
+      <strong>4. Read and edit</strong><br>
+      <sub>Open SKILL.md; only an explicit Save writes the file.</sub>
+    </td>
+  </tr>
+</table>
+
+```text
+workspace/
+├── team-skills/
+│   ├── dev/code-review/SKILL.md
+│   ├── research/citation-check/SKILL.md
+│   ├── research/paper-md-ingest/SKILL.md
+│   └── writing/writing-style/SKILL.md
+└── paper-notes/
+    └── .git/
+```
+
+### 1. Register a source and a project
+
+Open **Kago** in Magpie's sidebar. In the **…** menu, choose **Add source** and enter the absolute path to `team-skills`. Register the root containing the category folders; Kago scans them recursively. **Read Magpie Library** adds Magpie's existing skill Library as a source.
+
+Click **+** beside the project selector and enter the absolute path to `paper-notes`. It must be a Git repository. Leave the optional manifest path blank to use `skills.manifest.yaml` in its root. Click **Sync** to deploy the selected skills.
+
+### 2. Select skills and target agents
+
+1. Select **paper-notes** at the top and **team-skills** as the source. Categories and search narrow the list.
+2. Enable **Cursor** and **Codex** in the top agent row. These defaults apply to skills without an override.
+3. Check **paper-md-ingest** and **writing-style**. Clicking a row toggles selection; clicking its name opens the document.
+4. In the `writing-style` row, turn off Cursor and Codex, then enable **Claude Code**. The reset control restores the project defaults.
+
+Choose **Link** for relative symlinks back to the source. Choose **Copy** when the agent needs files inside the workspace, such as in a restricted or remote environment. Copied files receive later source changes on the next sync. An explicit empty agent selection deploys that skill nowhere.
+
+Selections remain in the draft until Sync. **Cancel changes** restores the baseline captured when the project was opened or last synced, without writing project files.
+
+### 3. Preview the exact paths
+
+Click **Preview** to open **Changes**. Here, `paper-md-ingest` creates one `.agents/skills` entry shared by Cursor and Codex; `writing-style` creates one `.claude/skills` entry. Preview leaves the manifest and deployment files untouched.
+
+Review **Create**, **Update**, **Remove** and **Conflict** rows before continuing. A conflict names the path that needs attention. The **Manifest** tab shows the YAML behind the current selection; you can also edit it there.
+
+### 4. Sync and inspect the result
+
+Click **Sync**. Kago validates the current draft, plans the filesystem changes, writes `skills.manifest.yaml` and deploys the selected skills. The header then shows **Synced**. Open **Existing** to inspect the actual links or folders in the project:
+
+```text
+paper-notes/
+├── skills.manifest.yaml
+├── .agents/skills/
+│   └── paper-md-ingest → ../../../team-skills/research/paper-md-ingest
+└── .claude/skills/
+    └── writing-style → ../../../team-skills/writing/writing-style
+```
+
+Commit the manifest to your project. Kago adds its generated deployment paths to its own managed `.gitignore` block. Previewing the same configuration again shows **Unchanged** entries.
+
+### 5. Read or edit a skill
+
+Click a skill name in **Skills** or **Existing** to open its document. The header's file picker switches between files within that skill. **Edit → Save** writes the selected file; canceling or closing protects unsaved edits.
+
+Editing a source skill or a deployed link changes the source file. Editing a deployed real folder changes that folder. A deployed copy receives source edits only after another sync, and local edits to that copy block replacement until resolved.
+
+<a name="manage-skills"></a>
+
+## Update and remove skills
+
+- **Add or change a selection:** check the skills, adjust agents, then **Preview → Sync**. Use **… → Sync all projects** to apply the saved manifests of all registered projects.
+- **Remove a managed deployment:** uncheck a skill and preview its removal, then Sync. Cleanup removes only unchanged outputs owned by Kago. Local modifications and unmanaged files are protected.
+- **Understand badges:** **Exists** means a matching source link or intact owned copy is present. Unchecking an existing skill changes its badge to **Will remove**. An unmanaged link may be detected as existing; detection does not grant Kago ownership or permit automatic deletion.
+- **Delete a specific workspace entry:** the trash action in **Existing** confirms the exact path. Deleting a link preserves its target; deleting a real folder removes that folder and its contents. This does not update the manifest, so a selected skill is recreated by a later sync.
+- **Stop managing a project:** **… → Unregister** keeps deployed files and relinquishes Kago's ownership.
+
+If Preview reports a whole-folder `.agents/skills` symlink, use **Fix** only after reviewing the named link and target. It replaces that link with a real folder and preserves the target. Review the new plan before syncing. For other ownership and recovery cases, see [CLI and recovery](docs/cli.md).
 
 <a name="manifest"></a>
 
@@ -72,16 +184,16 @@ A source-path install uses this checkout, so reload the plugin after code change
 
 ```yaml
 version: 1
-ssot: ../skills/obsidian-friendily-workflow/skills
+ssot: ../team-skills
 defaults:
   agents: [cursor, codex]
 deploy:
   method: link
 skills:
-  - name: obsidian-markdown
-    path: obsidian/obsidian-markdown
   - name: paper-md-ingest
-    path: obsidian/paper-md-ingest
+    path: research/paper-md-ingest
+  - name: writing-style
+    path: writing/writing-style
     agents: [claude]
 ```
 
@@ -104,9 +216,19 @@ Cursor, Codex, OpenCode and Gemini CLI share `.agents/skills`; Claude Code uses 
 
 ## CLI
 
+The CLI reads the same manifest as the page. Register a source and project, create `skills.manifest.yaml` using the example above or the page, then plan and apply:
+
 ```sh
-node cli.mjs plan /path/to/repo
-node cli.mjs apply /path/to/repo
+node cli.mjs source add /path/to/team-skills
+node cli.mjs project add /path/to/paper-notes
+node cli.mjs plan /path/to/paper-notes
+node cli.mjs apply /path/to/paper-notes
+```
+
+Use these commands to inspect registration and sync every project's saved manifest:
+
+```sh
+node cli.mjs status
 node cli.mjs sync
 ```
 

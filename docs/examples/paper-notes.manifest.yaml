@@ -1,0 +1,12 @@
+version: 1
+ssot: ../team-skills
+defaults:
+  agents: [cursor, codex]
+deploy:
+  method: link
+skills:
+  - name: paper-md-ingest
+    path: research/paper-md-ingest
+  - name: writing-style
+    path: writing/writing-style
+    agents: [claude]

@@ -4,7 +4,7 @@ Status: MVP implemented and locally installed · Revised: 2026-11-05
 
 ## 1. Product and delivery contract
 
-Build an independently installable Magpie community plugin, not a Magpie fork or a built-in Go module. Keep the plugin source in the user's private GitHub repository `magpie-skill-workspaces`, checked out at `/Users/zhuo/Developer/tools/magpie-skill-workspaces`.
+Build Kago as an independently installable Magpie community plugin. Source repository: https://github.com/ffy6511/Kago.
 
 The deliverable is one npm-compatible package containing the page, host service, sync engine, CLI and documentation. It must install from a local directory with `magpie plugin add /absolute/path/to/package`. Publishing to npm or submitting a community registry entry is a separate, later release action, not authorized by this implementation task. Local installation must not require publishing the private source repository.
 
@@ -43,7 +43,7 @@ Before product implementation, prove the installed Magpie version can install th
 
 ```yaml
 version: 1
-ssot: ../skills/obsidian-friendily-workflow/skills
+ssot: ../team-skills
 defaults:
   agents: [cursor]
 deploy:
@@ -76,7 +76,7 @@ A compact bilingual-capable workspace UI with a source/category browser, project
 
 ## 8. Scope limits
 
-No new LLM provider/gateway, no Skills Market replacement, no Magpie fork, no direct Library state-file writes, no automatic ob-notes symlink migration, no public release during this task. Group aliases, version pins, lockfile interoperability, WSL and mass-worktree discovery are later work.
+No new LLM provider/gateway, no Skills Market replacement, no Magpie fork, no direct Library state-file writes, no automatic workspace symlink migration, no public release during this task. Group aliases, version pins, lockfile interoperability, WSL and mass-worktree discovery are later work.
 
 ## 9. Implementation phases and commits
 
@@ -86,21 +86,21 @@ Each phase ends with relevant checks and an immediate English Conventional Commi
 - S1: manifest schema, categorized scanning and pure deployment planning, with adversarial validation tests.
 - S2: safe apply, inventory, drift/cleanup, CLI and integration checks in temporary Git repositories.
 - S3: workspace UI and local service APIs; verify the complete user flow in a browser and the Magpie launcher.
-- S4: docs, real SSOT/ob-notes read-only acceptance, packaged local install, runtime verification and final cleanup.
+- S4: docs, read-only acceptance with an existing skill source and project, packaged local install, runtime verification and final cleanup.
 
 ## 10. Acceptance
 
 - Local directory installs and runs inside the official local Magpie app without rebuilding it.
 - Real SSOT scanning shows `blog`, `dev`, `obsidian`, `writing` and their skills, reporting invalid entries explicitly.
-- A temporary Git project using an ob-notes fixture deploys only selected skills to verified agent paths in link/copy mode.
+- A temporary Git project using an example skill source deploys only selected skills to verified agent paths in link/copy mode.
 - Repeat Apply is idempotent; removing entries cleans only owned, unmodified targets. Modified copies and replaced links are conflicts unless the target exactly equals the intended output, in which case ownership is re-recorded.
-- Dry run and conflict checks do not mutate project files. The existing ob-notes whole-directory symlink is detected and preserved unless the user confirms the page's repair action.
+- Dry run and conflict checks do not mutate project files. An existing whole-directory symlink is detected and preserved unless the user confirms the page's repair action.
 - keep=true unregister preserves outputs. CLI and UI share the same engine and manifest.
 - Existing workspace skills are listed from every real per-agent skills folder, including symlinks and real directories. Valid entries open and edit through the shared reader; a link edit changes its target, while a real-folder edit changes that folder. A confirmed delete removes only the selected link or real folder; a link target survives, a linked skills parent is refused, and a changed or unsafe entry is rejected before deletion or editing.
 - Local service rejects missing tokens, untrusted Host headers, invalid paths and malformed requests.
 - Final report states repository URL, phase commits, checks, installed plugin location and any actual limitations.
 
-## 11. References and local fixture
+## 11. References and example fixture
 
 - https://github.com/magpie-community/plugins/tree/main/packages/chat
 - https://github.com/magpie-community/plugins#pages
@@ -108,7 +108,6 @@ Each phase ends with relevant checks and an immediate English Conventional Commi
 - https://github.com/yetone/magpie/blob/main/internal/library/projects.go
 - https://github.com/yetone/magpie/blob/main/docs/subsystems/library.md
 
-Real project: `/Users/zhuo/Developer/ob-notes`.
-Real SSOT: `/Users/zhuo/Developer/skills/obsidian-friendily-workflow/skills`.
-Initial skill names: `obsidian-markdown`, `obsidian-vault`, `obsidian-format-validation`, `learning-unit-ingest`, `paper-md-ingest`, `knowledge-radar-actions`, `obsidian-public-sync` (validate against disk).
-The existing `.agents/skills` symlink is an expected conflict fixture, not permission to migrate it.
+Use sibling `team-skills/` and `paper-notes/` directories as shown in the README. The project must contain `.git`; the source contains categorized skill folders with valid `SKILL.md` frontmatter. See [the example manifest](examples/paper-notes.manifest.yaml).
+
+A whole-directory `.agents/skills` symlink is a conflict fixture; repair requires explicit confirmation.
