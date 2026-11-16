@@ -513,12 +513,12 @@
       ${(detail?.conflicts || []).map((c) => issue(c.error ?? c, '', c.conflict)).join('')}${detail?.parseError ? issue(detail.parseError) : ''}
       ${
         project
-          ? `<div class="project-settings"><div class="lib-agents" role="group" aria-label="${t('defaults')}">${chips(primaryAgents, defaults, 'default-agent')}<button class="more-agents-button" data-action="more-agents" aria-expanded="${moreAgentsOpen}" aria-controls="extra-agents"><span>${t(moreAgentsOpen ? 'fewerAgents' : 'moreAgents')}</span>${glyph('chevron')}</button></div><div class="seg" role="group" aria-label="${t('method')}">${['link', 'copy'].map((m) => `<button data-action="method" data-value="${m}" aria-pressed="${m === method}">${t(m)}</button>`).join('')}</div></div><div id="extra-agents" class="extra-agents ${moreAgentsOpen ? 'expanded' : ''}" ${moreAgentsOpen ? '' : 'inert'}><div><div class="lib-agents" role="group" aria-label="${t('moreAgents')}">${chips(
+          ? `<div class="project-settings"><div class="lib-agents" role="group" aria-label="${t('defaults')}">${chips(primaryAgents, defaults, 'default-agent')}<button class="more-agents-button" data-action="more-agents" aria-expanded="${moreAgentsOpen}" aria-controls="extra-agents"><span data-alt="${esc(t(moreAgentsOpen ? 'moreAgents' : 'fewerAgents'))}">${t(moreAgentsOpen ? 'fewerAgents' : 'moreAgents')}</span>${glyph('chevron')}</button></div><div class="seg" role="group" aria-label="${t('method')}">${['link', 'copy'].map((m) => `<button data-action="method" data-value="${m}" aria-pressed="${m === method}">${t(m)}</button>`).join('')}</div></div><div id="extra-agents" class="extra-agents ${moreAgentsOpen ? 'expanded' : ''}" ${moreAgentsOpen ? '' : 'inert'}><div><div class="lib-agents" role="group" aria-label="${t('moreAgents')}">${chips(
               Object.keys(state.agents).filter((a) => !primaryAgents.includes(a)),
               defaults,
               'default-agent',
             )}</div></div></div>
-      <nav class="view-tabs" aria-label="Workspace views">${['skills', 'workspace', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k === 'workspace' ? 'workspaceSkills' : k)}${k === 'skills' && entries.length ? ` <span class="count">${entries.length}</span>` : k === 'workspace' && workspaceSkills.skills.length ? ` <span class="count">${workspaceSkills.skills.length}</span>` : ''}</button>`).join('')}</nav>`
+      <nav class="view-tabs" aria-label="Workspace views">${['skills', 'workspace', 'manifest', 'plan'].map((k) => `<button data-action="tab" data-value="${k}" aria-selected="${tab === k}">${t(k === 'workspace' ? 'workspaceSkills' : k)}${k === 'skills' ? ` <span class="count ${entries.length ? '' : 'empty-count'}" aria-hidden="${!entries.length}">${entries.length}</span>` : k === 'workspace' && workspaceSkills.skills.length ? ` <span class="count">${workspaceSkills.skills.length}</span>` : ''}</button>`).join('')}</nav>`
           : ''
       }
       <section class="workspace-view">${project && tab === 'workspace' ? renderWorkspaceSkills() : project && tab === 'manifest' ? renderManifest() : project && tab === 'plan' ? renderPlan() : renderSkills()}</section>
@@ -551,7 +551,7 @@
         list
           .map((s) => {
             const e = entries.find((e) => e.name === s.name && e.path === s.path);
-            return `<div class="skill-row ${e ? 'selected' : ''}" data-skill-row="${esc(s.path)}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button><span class="skill-row-grow"></span>${deploymentTag(s, e)}${e ? skillAgents(e) : ''}</div>`;
+            return `<div class="skill-row ${e ? 'selected' : ''}" data-skill-row="${esc(s.path)}"><input type="checkbox" aria-label="${esc(s.name)}" data-skill="${esc(s.path)}" ${e ? 'checked' : ''} ${!project ? 'disabled' : ''}><button class="skill-info" data-action="skill-preview" data-path="${esc(s.path)}" title="${esc(s.description)}">${esc(s.name)}</button><span class="skill-row-grow"></span>${deploymentTag(s, e)}${project ? skillAgents(e || s, !!e) : ''}</div>`;
           })
           .join('') || `<p class="empty">${t('noSkills')}</p>`
       }</div>`;
@@ -576,8 +576,8 @@
         : `<p class="empty">${t('noSkills')}</p>`
     }`;
   }
-  function skillAgents(e) {
-    return `<div class="skill-agents lib-agents" role="group" aria-label="${esc(e.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents ?? defaults).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(e.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(e.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>`;
+  function skillAgents(e, selected) {
+    return `<div class="skill-agents lib-agents ${selected ? '' : 'unselected'}" ${selected ? '' : 'inert aria-hidden="true"'} role="group" aria-label="${esc(e.name)} ${t('targets')}">${chips([...new Set([...primaryAgents, ...(e.agents ?? defaults).filter((a) => !primaryAgents.includes(a))])], e.agents ?? defaults, 'skill-agent', `data-name="${esc(e.name)}"`, true)}<button class="icon-button inherit ${e.agents === undefined ? 'inherited' : ''}" data-action="inherit" data-name="${esc(e.name)}" aria-label="${t('inherit')}" title="${e.agents === undefined ? t('inherit') : t('resetAgents')}">${glyph('reset')}</button></div>`;
   }
   function updateSkillSelection() {
     document.querySelectorAll('.skill-row').forEach((row) => {
@@ -586,25 +586,12 @@
       const entry = entries.find((e) => e.path === input.dataset.skill);
       input.checked = !!entry;
       row.classList.toggle('selected', !!entry);
-      let group = row.querySelector('.skill-agents');
-      if (entry && !group) {
-        row.insertAdjacentHTML('beforeend', skillAgents(entry));
-        group = row.querySelector('.skill-agents');
-        if (!matchMedia('(prefers-reduced-motion: reduce)').matches)
-          group.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180 });
-      }
-      if (entry && group) {
-        group.classList.remove('leaving');
-        group.inert = false;
-      }
-      if (!entry && group) {
-        group.classList.add('leaving');
-        group.inert = true;
-        const remove = () => {
-          if (group.classList.contains('leaving')) group.remove();
-        };
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) remove();
-        else setTimeout(remove, 200);
+      const group = row.querySelector('.skill-agents');
+      if (group) {
+        group.classList.toggle('unselected', !entry);
+        group.inert = !entry;
+        if (entry) group.removeAttribute('aria-hidden');
+        else group.setAttribute('aria-hidden', 'true');
       }
     });
     const all = $('#category-all'),
@@ -622,7 +609,7 @@
     const wanted = entry && (entry.agents ?? defaults).length > 0;
     const paths = found.targets.map((target) => target.relative).join('\n');
     const external = found.targets.some((target) => !target.managed);
-    return `<span class="deployment-tag ${wanted ? 'existing' : 'removing'}" title="${esc(paths + (external ? '\n' + t('externalDeployment') : ''))}" role="status">${t(wanted ? 'existing' : 'willRemove')}</span>`;
+    return `<span class="deployment-tag ${wanted ? 'existing' : 'removing'}" data-alt="${esc(t(wanted ? 'willRemove' : 'existing'))}" title="${esc(paths + (external ? '\n' + t('externalDeployment') : ''))}" role="status">${t(wanted ? 'existing' : 'willRemove')}</span>`;
   }
   function updateDeploymentTags() {
     document.querySelectorAll('.skill-row').forEach((row) => {
@@ -635,6 +622,7 @@
       if (tag) {
         tag.classList.toggle('existing', !!wanted);
         tag.classList.toggle('removing', !wanted);
+        tag.dataset.alt = t(wanted ? 'willRemove' : 'existing');
         tag.textContent = t(wanted ? 'existing' : 'willRemove');
       }
     });
@@ -816,8 +804,10 @@
     updateProjectStatus();
     $('[data-action="preview"]').disabled = !text.trim();
     $('[data-action="apply"]').disabled = !text.trim();
-    $('.view-tabs [data-value="skills"]').innerHTML =
-      t('skills') + (entries.length ? ` <span class="count">${entries.length}</span>` : '');
+    const count = $('.view-tabs [data-value="skills"] .count');
+    count.textContent = entries.length;
+    count.classList.toggle('empty-count', !entries.length);
+    count.setAttribute('aria-hidden', !entries.length);
     if (tab === 'manifest') $('#manifest-editor').value = text;
     if (tab === 'plan') $('.workspace-view').innerHTML = renderPlan();
     updateCancelButton();
@@ -966,6 +956,7 @@
       moreAgentsOpen = !moreAgentsOpen;
       b.setAttribute('aria-expanded', moreAgentsOpen);
       b.querySelector('span').textContent = t(moreAgentsOpen ? 'fewerAgents' : 'moreAgents');
+      b.querySelector('span').dataset.alt = t(moreAgentsOpen ? 'moreAgents' : 'fewerAgents');
       $('#extra-agents').classList.toggle('expanded', moreAgentsOpen);
       $('#extra-agents').inert = !moreAgentsOpen;
       return;

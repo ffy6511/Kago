@@ -277,6 +277,11 @@ hr {
   color: var(--muted);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: left;
+}
+.empty-count {
+  visibility: hidden;
 }
 .source-toolbar {
   margin-bottom: 9px;
@@ -352,10 +357,14 @@ hr {
 }
 .skill-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  min-height: 45px;
-  padding: 11px 14px;
+  min-height: 48px;
+  padding: 10px 14px;
+}
+.skill-row > input[type='checkbox'] {
+  flex: none;
+  margin: 0;
 }
 .skill-row + .skill-row {
   border-top: 1px solid var(--line);
@@ -383,11 +392,10 @@ hr {
 }
 .skill-agents {
   flex: none;
-  margin-top: -2px;
 }
 .skill-agents .lib-ag {
-  height: 25px;
-  min-width: 25px;
+  height: 26px;
+  min-width: 26px;
   padding: 0 4px;
 }
 .inherit {
@@ -557,7 +565,8 @@ hr {
     padding: 16px;
   }
   .workspace-header {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 8px;
   }
   .actions {
@@ -635,6 +644,15 @@ button,
 .more-agents-button:hover {
   color: var(--fg);
   background: var(--pill);
+}
+/* Alternate labels occupy the same width in either state. */
+.more-agents-button span::after,
+.deployment-tag[data-alt]::after {
+  content: attr(data-alt);
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
 }
 .project-settings {
   margin-bottom: 0;
@@ -844,11 +862,15 @@ button,
 }
 
 .skill-agents {
-  transition: opacity 0.18s var(--ease);
+  transition:
+    opacity 0.18s var(--ease),
+    visibility 0s;
 }
-.skill-agents.leaving {
+.skill-agents.unselected {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
+  transition-delay: 0s, 0.18s;
 }
 
 .selection-actions {
