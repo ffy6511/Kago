@@ -54,7 +54,15 @@ Kago is a Magpie plugin that selects skills from shared sources and deploys each
 
 ## Install
 
-Clone the repository and install dependencies:
+Install the published plugin directly:
+
+```sh
+magpie plugin add @jhzhuo/kago
+```
+
+Open **Magpie → Plugins → Kago**. The local service starts automatically; its default port is `3498` (configurable in the plugin options). Remove the package with `magpie plugin rm @jhzhuo/kago`.
+
+### Install from source
 
 ```sh
 git clone https://github.com/ffy6511/Kago.git
@@ -67,14 +75,6 @@ Install the local plugin:
 ```sh
 magpie plugin add /absolute/path/to/Kago
 ```
-
-If the macOS app's CLI is not on `PATH`:
-
-```sh
-/Applications/magpie.app/Contents/MacOS/magpie plugin add /absolute/path/to/Kago
-```
-
-Open **Magpie → Plugins → Kago**. The local service starts automatically; its default port is `3498` (configurable in the plugin options).
 
 A source-path install uses this checkout, so reload the plugin after code changes. Remove it with `magpie plugin rm /absolute/path/to/Kago`.
 
@@ -232,7 +232,7 @@ node cli.mjs status
 node cli.mjs sync
 ```
 
-Node 22 or newer, with dependencies installed (`bun install`). The installed command is `kago`. `--config-dir` isolates state; `--magpie-dir` selects the Library config root.
+Node 22 or newer, with dependencies installed (`bun install`). For CLI-only use, install `npm install --global @jhzhuo/kago` and run `kago` in place of `node cli.mjs`. `--config-dir` isolates state; `--magpie-dir` selects the Library config root.
 
 <a name="development"></a>
 

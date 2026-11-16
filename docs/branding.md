@@ -1,6 +1,6 @@
 # Kago
 
-Kago (ka-go) takes its name from 籠, Japanese for “basket”. Each project selects its own set of agent skills from shared sources. The package is `@ffy6511/kago`, the CLI is `kago`, and the plugin page title is Kago in both languages.
+Kago (ka-go) takes its name from 籠, Japanese for “basket”. Each project selects its own set of agent skills from shared sources. The package is `@jhzhuo/kago`, the CLI is `kago`, and the plugin page title is Kago in both languages.
 
 The icon is [`page/kago-icon.png`](../page/kago-icon.png), a transparent PNG generated with the built-in imagegen tool. A charcoal and wheat-colored woven basket holds three skill cards. Both READMEs display it at 160 × 160 pixels. Magpie's sidebar uses the same image through `magpie.page.icon`; its location inside `page/` lets the host serve it with the launcher.
 

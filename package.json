@@ -1,7 +1,18 @@
 {
-  "name": "@ffy6511/kago",
+  "name": "@jhzhuo/kago",
   "version": "0.1.0",
   "description": "Kago — agent skills tailored to each project, powered by Magpie",
+  "keywords": [
+    "magpie",
+    "magpie-plugin",
+    "agent-skills",
+    "skills",
+    "workspace"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "main": "./index.mjs",
   "bin": {
@@ -28,6 +39,8 @@
     "format:check": "prettier --check ."
   },
   "magpie": {
+    "name": "Kago",
+    "icon": "https://cdn.jsdelivr.net/npm/@jhzhuo/kago@0.1.0/page/kago-icon.png",
     "summary": {
       "en": "Deploy categorized skills to projects from a Git-tracked manifest",
       "zh": "从分类技能库和项目清单同步项目级技能"

@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "@ffy6511/kago",
+      "name": "@jhzhuo/kago",
       "dependencies": {
         "markdown-it": "^15.0.3",
         "yaml": "^2.9.1",

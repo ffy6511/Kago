@@ -54,7 +54,15 @@ Kago 是一个 Magpie 插件，从共享来源挑选技能，用一份纳入 Git
 
 ## 安装
 
-克隆仓库并安装依赖：
+直接安装已发布的插件：
+
+```sh
+magpie plugin add @jhzhuo/kago
+```
+
+打开 **Magpie → 插件 → Kago**。本地服务会自动启动，默认端口为 `3498`，可在插件 Options 中修改。卸载使用 `magpie plugin rm @jhzhuo/kago`。
+
+### 从源码安装
 
 ```sh
 git clone https://github.com/ffy6511/Kago.git
@@ -67,14 +75,6 @@ bun install --frozen-lockfile
 ```sh
 magpie plugin add /absolute/path/to/Kago
 ```
-
-如果 macOS 应用的 CLI 不在 `PATH` 里：
-
-```sh
-/Applications/magpie.app/Contents/MacOS/magpie plugin add /absolute/path/to/Kago
-```
-
-打开 **Magpie → 插件 → Kago**。本地服务会自动启动，默认端口为 `3498`，可在插件 Options 中修改。
 
 以源码路径安装时使用的是当前 checkout，改完代码后重新加载插件即可。卸载使用 `magpie plugin rm /absolute/path/to/Kago`。
 
@@ -232,7 +232,7 @@ node cli.mjs status
 node cli.mjs sync
 ```
 
-需要 Node 22 或更新版本，并已安装依赖（`bun install`）。安装后的命令名为 `kago`。`--config-dir` 隔离状态；`--magpie-dir` 选择 Library 配置根目录。
+需要 Node 22 或更新版本，并已安装依赖（`bun install`）。只使用 CLI 时，可执行 `npm install --global @jhzhuo/kago`，再用 `kago` 替代 `node cli.mjs`。`--config-dir` 隔离状态；`--magpie-dir` 选择 Library 配置根目录。
 
 <a name="development"></a>
 

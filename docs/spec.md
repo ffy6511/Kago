@@ -6,7 +6,7 @@ Status: MVP implemented and locally installed · Revised: 2026-11-05
 
 Build Kago as an independently installable Magpie community plugin. Source repository: https://github.com/ffy6511/Kago.
 
-The deliverable is one npm-compatible package containing the page, host service, sync engine, CLI and documentation. It must install from a local directory with `magpie plugin add /absolute/path/to/package`. Publishing to npm or submitting a community registry entry is a separate, later release action, not authorized by this implementation task. Local installation must not require publishing the private source repository.
+The deliverable is one npm-compatible package containing the page, host service, sync engine, CLI and documentation. It installs from npm with `magpie plugin add @jhzhuo/kago` or from a local directory with `magpie plugin add /absolute/path/to/package`. Marketplace registration uses the community registry's `page` kind.
 
 ## 2. User need
 
@@ -76,7 +76,7 @@ A compact bilingual-capable workspace UI with a source/category browser, project
 
 ## 8. Scope limits
 
-No new LLM provider/gateway, no Skills Market replacement, no Magpie fork, no direct Library state-file writes, no automatic workspace symlink migration, no public release during this task. Group aliases, version pins, lockfile interoperability, WSL and mass-worktree discovery are later work.
+No new LLM provider/gateway, no Skills Market replacement, no Magpie fork, no direct Library state-file writes and no automatic workspace symlink migration. Group aliases, version pins, lockfile interoperability, WSL and mass-worktree discovery are later work.
 
 ## 9. Implementation phases and commits
 
